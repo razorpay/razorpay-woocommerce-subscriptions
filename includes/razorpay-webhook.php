@@ -10,74 +10,14 @@ class RZP_Subscription_Webhook
 {
     const RAZORPAY_SUBSCRIPTION_ID = 'razorpay_subscription_id';
 
-    public function process()
-    {
-        $post = file_get_contents('php://input');
-
-        $data = json_decode($post, true);
-
-        if (json_last_error() !== 0)
-        {
-            return;
-        }
-
-        if ($this->razorpay->enable_webhook === 'yes' && empty($data['event']) === false)
-        {
-            if ((isset($_SERVER['HTTP_X_RAZORPAY_SIGNATURE']) === true))
-            {
-                $razorpayWebhookSecret = $this->razorpay->webhook_secret;
-
-                //
-                // If the webhook secret isn't set on wordpress, return
-                //
-                if (empty($razorpayWebhookSecret) === true)
-                {
-                    return;
-                }
-
-                try
-                {
-                    $this->api->utility->verifyWebhookSignature($post,
-                                                                $_SERVER['HTTP_X_RAZORPAY_SIGNATURE'],
-                                                                $razorpayWebhookSecret);
-                }
-                catch (Errors\SignatureVerificationError $e)
-                {
-                    $log = array(
-                        'message'   => $e->getMessage(),
-                        'data'      => $data,
-                        'event'     => 'razorpay.wc.signature..verify_failed'
-                    );
-
-                    write_log($log);
-                    return;
-                }
-
-                switch ($data['event'])
-                {
-                    case 'payment.authorized':
-                        return $this->paymentAuthorized($data);
-
-                    case 'payment.failed':
-                        return $this->paymentFailed($data);
-
-                    // if it is subscription.charged
-                    case 'subscription.charged':
-                        return $this->subscriptionCharged($data);
-
-                    default:
-                        return;
-                }
-            }
-        }
-    }
-
     /**
      * Handling the payment authorized webhook
      *
+     * This only gets called if
+     *
      * @param $data
      */
-    protected function paymentAuthorized($data)
+    protected function paymentAuthorized(array $data)
     {
         //
         // Order entity should be sent as part of the webhook payload
@@ -88,59 +28,8 @@ class RZP_Subscription_Webhook
 
         if (isset($data['payload']['payment']['entity']['subscription_id']) === true)
         {
-            return $this->processSubscription($orderId, $paymentId);
+            $this->processSubscription($orderId, $paymentId);
         }
-
-        $order = new WC_Order($orderId);
-
-        if ($order->needs_payment() === false)
-        {
-            return;
-        }
-
-        $razorpayPaymentId = $data['payload']['payment']['entity']['id'];
-
-        try
-        {
-            $payment = $this->api->payment->fetch($razorpayPaymentId);
-        }
-        catch (Exception $e)
-        {
-            $log = array(
-                'message'   => $e->getMessage(),
-                'data'      => $razorpayPaymentId,
-                'event'     => $data['event']
-            );
-
-            write_log($log);
-
-            exit;
-        }
-
-        $amount = $this->getOrderAmountAsInteger($order);
-
-        $success = false;
-        $errorMessage = 'The payment has failed.';
-
-        if ($payment['status'] === 'captured')
-        {
-            $success = true;
-        }
-        else if (($payment['status'] === 'authorized') and
-                 ($this->razorpay->payment_action === 'capture'))
-        {
-            //
-            // If the payment is only authorized, we capture it
-            // If the merchant has enabled auto capture
-            //
-            $payment->capture(array('amount' => $amount));
-
-            $success = true;
-        }
-
-        $this->razorpay->updateOrder($order, $success, $errorMessage, $razorpayPaymentId, true);
-
-        exit;
     }
 
     /**
@@ -148,7 +37,7 @@ class RZP_Subscription_Webhook
      *
      * @param $data
      */
-    protected function paymentFailed($data)
+    protected function paymentFailed(array $data)
     {
         //
         // Order entity should be sent as part of the webhook payload
@@ -161,8 +50,6 @@ class RZP_Subscription_Webhook
         {
             $this->processSubscription($orderId, $paymentId, false);
         }
-
-        exit;
     }
 
     /**
@@ -170,7 +57,7 @@ class RZP_Subscription_Webhook
      *
      * @param $data
      */
-    protected function subscriptionCharged($data)
+    protected function subscriptionCharged(array $data)
     {
         //
         // Order entity should be sent as part of the webhook payload
@@ -210,6 +97,7 @@ class RZP_Subscription_Webhook
         catch (Exception $e)
         {
             $message = $e->getMessage();
+
             return 'RAZORPAY ERROR: Subscription fetch failed with the message \'' . $message . '\'';
         }
 
@@ -278,18 +166,5 @@ class RZP_Subscription_Webhook
     protected function processSubscriptionFailed($orderId)
     {
         WC_Subscriptions_Manager::process_subscription_payment_failure_on_order($orderId);
-    }
-
-    /**
-     * Returns the order amount, rounded as integer
-     */
-    public function getOrderAmountAsInteger($order)
-    {
-        if (version_compare(WOOCOMMERCE_VERSION, '3.0.0', '>='))
-        {
-            return (int) round($order->get_total() * 100);
-        }
-
-        return (int) round($order->order_total * 100);
     }
 }
