@@ -1,14 +1,27 @@
 <?php
 
-require_once __DIR__.'/../razorpay-payments.php';
-require_once __DIR__.'/../razorpay-sdk/Razorpay.php';
+$pluginRoot = WP_PLUGIN_DIR . '/' . RAZORPAY_WOOCOMMERCE_PLUGIN;
 
-use Razorpay\Api\Api;
+require_once $pluginRoot . '/razorpay-payments.php';
+require_once $pluginRoot . '/includes/razorpay-webhook.php';
+require_once $pluginRoot . '/razorpay-sdk/Razorpay.php';
+
 use Razorpay\Api\Errors;
 
-class RZP_Subscription_Webhook
+class RZP_Subscription_Webhook extends RZP_Webhook
 {
-    const RAZORPAY_SUBSCRIPTION_ID = 'razorpay_subscription_id';
+    protected $razorpay;
+    protected $api;
+
+    const PAYMENT_AUTHORIZED   = 'payment.authorized';
+    const PAYMENT_FAILED       = 'payment.failed';
+
+    function __construct()
+    {
+        $this->razorpay = new WC_Razorpay(false);
+
+        $this->api = $this->razorpay->getRazorpayApiInstance();
+    }
 
     public function process()
     {
@@ -21,11 +34,11 @@ class RZP_Subscription_Webhook
             return;
         }
 
-        if ($this->razorpay->enable_webhook === 'yes' && empty($data['event']) === false)
+        if ($this->razorpay->getSetting('enable_webhook') === 'yes' && empty($data['event']) === false)
         {
             if ((isset($_SERVER['HTTP_X_RAZORPAY_SIGNATURE']) === true))
             {
-                $razorpayWebhookSecret = $this->razorpay->webhook_secret;
+                $razorpayWebhookSecret = $this->razorpay->getSetting('webhook_secret');
 
                 //
                 // If the webhook secret isn't set on wordpress, return
@@ -55,15 +68,11 @@ class RZP_Subscription_Webhook
 
                 switch ($data['event'])
                 {
-                    case 'payment.authorized':
+                    case self::PAYMENT_AUTHORIZED:
                         return $this->paymentAuthorized($data);
 
-                    case 'payment.failed':
+                    case self::PAYMENT_FAILED:
                         return $this->paymentFailed($data);
-
-                    // if it is subscription.charged
-                    case 'subscription.charged':
-                        return $this->subscriptionCharged($data);
 
                     default:
                         return;
@@ -76,8 +85,9 @@ class RZP_Subscription_Webhook
      * Handling the payment authorized webhook
      *
      * @param $data
+     * @return string|void
      */
-    protected function paymentAuthorized($data)
+    protected function paymentAuthorized(array $data)
     {
         //
         // Order entity should be sent as part of the webhook payload
@@ -86,9 +96,19 @@ class RZP_Subscription_Webhook
 
         $paymentId = $data['payload']['payment']['entity']['id'];
 
-        if (isset($data['payload']['payment']['entity']['subscription_id']) === true)
+        if (isset($data['payload']['payment']['entity']['invoice_id']) === true)
         {
-            return $this->processSubscription($orderId, $paymentId);
+            $invoiceId = $data['payload']['payment']['entity']['invoice_id'];
+
+            $invoice = $this->api->invoice->fetch($invoiceId);
+
+            // Process subscription this way
+            if (empty($invoice->subscription_id) === false)
+            {
+                $subscriptionId = $invoice->subscription_id;
+
+                return $this->processSubscription($orderId, $paymentId, $subscriptionId);
+            }
         }
 
         $order = new WC_Order($orderId);
@@ -148,7 +168,7 @@ class RZP_Subscription_Webhook
      *
      * @param $data
      */
-    protected function paymentFailed($data)
+    protected function paymentFailed(array $data)
     {
         //
         // Order entity should be sent as part of the webhook payload
@@ -166,40 +186,24 @@ class RZP_Subscription_Webhook
     }
 
     /**
-     * Handling the subscription charged webhook
-     *
-     * @param $data
-     */
-    protected function subscriptionCharged($data)
-    {
-        //
-        // Order entity should be sent as part of the webhook payload
-        //
-        $orderId = $data['payload']['subscription']['entity']['notes']['woocommerce_order_id'];
-
-        $this->processSubscription($orderId);
-
-        exit;
-    }
-
-    /**
      * Helper method used to handle all subscription processing
      *
      * @param $orderId
-     * @param $paymentId
-     * @param $success
+     * @param string $paymentId
+     * @param $subscriptionId
+     * @param bool $success
+     * @return string|void
      */
-    protected function processSubscription($orderId, $paymentId, $success = true)
+    protected function processSubscription($orderId, $paymentId, $subscriptionId, $success = true)
     {
         //
         // If success is false, automatically process subscription failure
         //
+
         if ($success === false)
         {
             return $this->processSubscriptionFailed($orderId);
         }
-
-        $subscriptionId = get_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID)[0];
 
         $api = $this->razorpay->getRazorpayApiInstance();
 
@@ -221,8 +225,9 @@ class RZP_Subscription_Webhook
     /**
      * In the case of successful payment, we mark the subscription successful
      *
-     * @param $wcSubscription
+     * @param $orderId
      * @param $subscription
+     * @param $paymentId
      */
     protected function processSubscriptionSuccess($orderId, $subscription, $paymentId)
     {
