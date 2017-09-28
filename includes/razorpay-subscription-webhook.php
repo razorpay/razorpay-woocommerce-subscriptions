@@ -22,69 +22,14 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         {
             $invoiceId = $data['payload']['payment']['entity']['invoice_id'];
 
-            $invoice = $this->getInvoice($invoiceId);
+            $subscriptionId = $this->getSubscriptionId($invoiceId);
 
             // Process subscription this way
-            if (empty($invoice->subscription_id) === false)
+            if (empty($subscriptionId) === false)
             {
-                $subscriptionId = $invoice->subscription_id;
-
                 return $this->processSubscription($paymentId, $subscriptionId);
             }
         }
-
-        $orderId = $data['payload']['payment']['entity']['notes']['woocommerce_order_id'];
-
-        $order = new WC_Order($orderId);
-
-        if ($order->needs_payment() === false)
-        {
-            return;
-        }
-
-        $razorpayPaymentId = $data['payload']['payment']['entity']['id'];
-
-        try
-        {
-            $payment = $this->api->payment->fetch($razorpayPaymentId);
-        }
-        catch (Exception $e)
-        {
-            $log = array(
-                'message'   => $e->getMessage(),
-                'data'      => $razorpayPaymentId,
-                'event'     => $data['event']
-            );
-
-            write_log($log);
-
-            exit;
-        }
-
-        $amount = $this->getOrderAmountAsInteger($order);
-
-        $success = false;
-        $errorMessage = 'The payment has failed.';
-
-        if ($payment['status'] === 'captured')
-        {
-            $success = true;
-        }
-        else if (($payment['status'] === 'authorized') and
-                 ($this->razorpay->payment_action === 'capture'))
-        {
-            //
-            // If the payment is only authorized, we capture it
-            // If the merchant has enabled auto capture
-            //
-            $payment->capture(array('amount' => $amount));
-
-            $success = true;
-        }
-
-        $this->razorpay->updateOrder($order, $success, $errorMessage, $razorpayPaymentId, true);
-
-        exit;
     }
 
     /**
@@ -100,13 +45,11 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         {
             $invoiceId = $data['payload']['payment']['entity']['invoice_id'];
 
-            $invoice = $this->getInvoice($invoiceId);
+            $subscriptionId = $this->getSubscriptionId($invoiceId);
 
             // Process subscription this way
-            if (empty($invoice->subscription_id) === false)
+            if (empty($subscriptionId) === false)
             {
-                $subscriptionId = $invoice->subscription_id;
-
                 return $this->processSubscription($paymentId, $subscriptionId, false);
             }
         }
@@ -114,7 +57,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         exit;
     }
 
-    protected function getInvoice($invoiceId)
+    protected function getSubscriptionId($invoiceId)
     {
         try
         {
@@ -133,7 +76,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             exit;
         }
 
-        return $invoice;
+        return $invoice->subscription_id;
     }
 
     /**
