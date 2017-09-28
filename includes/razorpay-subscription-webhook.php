@@ -5,10 +5,23 @@ use Razorpay\Api\Errors;
 class RZP_Subscription_Webhook extends RZP_Webhook
 {
     /**
-     * Handling the payment authorized webhook
+     * Process a Razorpay Subscription Webhook. We exit in the following cases:
+     * - Successful processed
+     * - Exception while fetching the invoice or subscription entity
      *
-     * @param $data
-     * @return string|void
+     * It passes on the webhook in the following cases:
+     * - invoice_id is not set in the json
+     * - Not a subscription webhook
+     * - Invalid JSON
+     * - Signature mismatch
+     * - Secret isn't setup
+     * - Event not recognized
+     */
+
+    /**
+     * Processes a payment authorized webhook
+     *
+     * @param array $data
      */
     protected function paymentAuthorized(array $data)
     {
@@ -53,8 +66,6 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 return $this->processSubscription($paymentId, $subscriptionId, false);
             }
         }
-
-        exit;
     }
 
     protected function getSubscriptionId($invoiceId)
@@ -82,7 +93,6 @@ class RZP_Subscription_Webhook extends RZP_Webhook
     /**
      * Helper method used to handle all subscription processing
      *
-     * @param $orderId
      * @param string $paymentId
      * @param $subscriptionId
      * @param bool $success
@@ -90,10 +100,6 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      */
     protected function processSubscription($paymentId, $subscriptionId, $success = true)
     {
-        //
-        // If success is false, automatically process subscription failure
-        //
-
         $api = $this->razorpay->getRazorpayApiInstance();
 
         try
@@ -103,14 +109,20 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         catch (Exception $e)
         {
             $message = $e->getMessage();
-            return 'RAZORPAY ERROR: Subscription fetch failed with the message \'' . $message . '\'';
+
+            return "RAZORPAY ERROR: Subscription fetch failed with the message $message";
         }
 
         $orderId = $subscription->notes->woocommerce_order_id;
 
+        //
+        // If success is false, automatically process subscription failure
+        //
         if ($success === false)
         {
-            return $this->processSubscriptionFailed($orderId);
+            $this->processSubscriptionFailed($orderId);
+
+            exit;
         }
 
         $this->processSubscriptionSuccess($orderId, $subscription, $paymentId);
