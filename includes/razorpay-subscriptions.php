@@ -1,285 +1,216 @@
 <?php
+/*
+Plugin Name: Razorpay Subscriptions for WooCommerce
+Plugin URI: https://razorpay.com
+Description: Razorpay Subscriptions for WooCommerce
+Version: 1.0.0
+Stable tag: 1.0.0
+Author: Razorpay
+Author URI: https://razorpay.com
+*/
 
+if ( ! defined( 'ABSPATH' ) )
+{
+    exit; // Exit if accessed directly
+}
+
+define('RAZORPAY_WOOCOMMERCE_PLUGIN', 'woo-razorpay');
 $pluginRoot = WP_PLUGIN_DIR . '/' . RAZORPAY_WOOCOMMERCE_PLUGIN;
 
 require_once $pluginRoot . '/razorpay-payments.php';
-require_once $pluginRoot . '/includes/razorpay-webhook.php';
 require_once $pluginRoot . '/razorpay-sdk/Razorpay.php';
+require_once __DIR__ . '/includes/razorpay-subscription-webhook.php';
+require_once __DIR__ . '/includes/Errors/SubscriptionErrorCode.php';
+require_once __DIR__ . '/includes/razorpay-subscriptions.php';
 
+use Razorpay\Api\Api;
 use Razorpay\Api\Errors;
+use Razorpay\Woocommerce\Errors as WooErrors;
 
-class RZP_Subscription_Webhook extends RZP_Webhook
+// Load this after the woo-razorpay plugin
+add_action('plugins_loaded', 'woocommerce_razorpay_subscriptions_init', 20);
+add_action('admin_post_nopriv_rzp_wc_webhook', 'razorpay_webhook_subscription_init', 20);
+
+function woocommerce_razorpay_subscriptions_init()
 {
-    protected $razorpay;
-    protected $api;
-
-    const PAYMENT_AUTHORIZED   = 'payment.authorized';
-    const PAYMENT_FAILED       = 'payment.failed';
-
-    function __construct()
+    if (!class_exists('WC_Payment_Gateway'))
     {
-        $this->razorpay = new WC_Razorpay(false);
-
-        $this->api = $this->razorpay->getRazorpayApiInstance();
+        return;
     }
 
-    public function process()
+    class WC_Razorpay_Subscription extends WC_Razorpay
     {
-        $post = file_get_contents('php://input');
+        public $id = 'razorpay_subscriptions';
+        public $method_title = 'Razorpay Subscriptions';
 
-        $data = json_decode($post, true);
+        const RAZORPAY_SUBSCRIPTION_ID       = 'razorpay_subscription_id';
+        const DEFAULT_LABEL                  = 'MasterCard/Visa Credit Card';
+        const DEFAULT_DESCRIPTION            = 'Setup automatic recurring billing on a MasterCard or Visa Credit Card';
 
-        if (json_last_error() !== 0)
+        protected $visibleSettings = array(
+            'enabled',
+            'title',
+            'description',
+        );
+
+        public $supports = array(
+            'subscriptions',
+            'subscription_reactivation',
+            'subscription_suspension',
+            'subscription_cancellation',
+        );
+
+        public function __construct()
         {
-            return;
+            parent::__construct();
+            $this->mergeSettingsWithParentPlugin();
+            $this->setupExtraHooks();
         }
 
-        if ($this->razorpay->getSetting('enable_webhook') === 'yes' && empty($data['event']) === false)
+        private function mergeSettingsWithParentPlugin()
         {
-            if ((isset($_SERVER['HTTP_X_RAZORPAY_SIGNATURE']) === true))
+            // Easiest way to read config of a different plugin
+            // is to initialize it
+            $gw = new WC_Razorpay(false);
+
+            $parentSettings = array(
+                'key_id',
+                'key_secret',
+                'webhook_secret',
+            );
+
+            foreach ($parentSettings as $key)
             {
-                $razorpayWebhookSecret = $this->razorpay->getSetting('webhook_secret');
-
-                //
-                // If the webhook secret isn't set on wordpress, return
-                //
-                if (empty($razorpayWebhookSecret) === true)
-                {
-                    return;
-                }
-
-                try
-                {
-                    $this->api->utility->verifyWebhookSignature($post,
-                                                                $_SERVER['HTTP_X_RAZORPAY_SIGNATURE'],
-                                                                $razorpayWebhookSecret);
-                }
-                catch (Errors\SignatureVerificationError $e)
-                {
-                    $log = array(
-                        'message'   => $e->getMessage(),
-                        'data'      => $data,
-                        'event'     => 'razorpay.wc.signature..verify_failed'
-                    );
-
-                    write_log($log);
-                    return;
-                }
-
-                switch ($data['event'])
-                {
-                    case self::PAYMENT_AUTHORIZED:
-                        return $this->paymentAuthorized($data);
-
-                    case self::PAYMENT_FAILED:
-                        return $this->paymentFailed($data);
-
-                    default:
-                        return;
-                }
-            }
-        }
-    }
-
-    /**
-     * Handling the payment authorized webhook
-     *
-     * @param $data
-     * @return string|void
-     */
-    protected function paymentAuthorized(array $data)
-    {
-        //
-        // Order entity should be sent as part of the webhook payload
-        //
-
-        $paymentId = $data['payload']['payment']['entity']['id'];
-
-        if (isset($data['payload']['payment']['entity']['invoice_id']) === true)
-        {
-            $invoiceId = $data['payload']['payment']['entity']['invoice_id'];
-
-            $invoice = $this->api->invoice->fetch($invoiceId);
-
-            // Process subscription this way
-            if (empty($invoice->subscription_id) === false)
-            {
-                $subscriptionId = $invoice->subscription_id;
-
-                return $this->processSubscription($paymentId, $subscriptionId);
+                $this->settings[$key] = $gw->settings[$key];
             }
         }
 
-        $orderId = $data['payload']['payment']['entity']['notes']['woocommerce_order_id'];
-
-        $order = new WC_Order($orderId);
-
-        if ($order->needs_payment() === false)
+        protected function setupExtraHooks()
         {
-            return;
+            add_action('woocommerce_subscription_status_cancelled', array(&$this, 'subscription_cancelled'));
+
+            // Hide Subscriptions Gateway for non-subscription payments
+            add_filter('woocommerce_available_payment_gateways', array($this, 'disable_non_subscription'), 20);
         }
 
-        $razorpayPaymentId = $data['payload']['payment']['entity']['id'];
+        public function disable_non_subscription($availableGateways)
+        {
+            global $woocommerce;
 
-        try
-        {
-            $payment = $this->api->payment->fetch($razorpayPaymentId);
+            $enable = WC_Subscriptions_Cart::cart_contains_subscription();
+
+            if ($enable === false)
+            {
+                if (isset($availableGateways[$this->id]))
+                {
+                    unset($availableGateways[$this->id]);
+                }
+            }
+
+            return $availableGateways;
         }
-        catch (Exception $e)
+
+        public function admin_options()
         {
-            $log = array(
-                'message'   => $e->getMessage(),
-                'data'      => $razorpayPaymentId,
-                'event'     => $data['event']
+            echo '<h3>'.__('Razorpay Subscriptions Payment Gateway', $this->id) . '</h3>';
+            echo '<p>'.__('Allows recurring payments by MasterCard/Visa Credit Cards') . '</p>';
+            echo '<table class="form-table">';
+
+            // Generate the HTML For the settings form.
+            $this->generate_settings_html();
+            echo '</table>';
+        }
+
+        protected function getSubscriptionSessionKey($orderId)
+        {
+            return self::RAZORPAY_SUBSCRIPTION_ID . $orderId;
+        }
+
+        protected function getRazorpayPaymentParams($orderId)
+        {
+            $this->subscriptions = new RZP_Subscriptions($this->getSetting('key_id'), $this->getSetting('key_secret'));
+
+            try
+            {
+                $subscriptionId = $this->subscriptions->createSubscription($orderId);
+
+                add_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
+            }
+            catch (Exception $e)
+            {
+                $message = $e->getMessage();
+
+                throw new Exception("RAZORPAY ERROR: Subscription creation failed with the following message: '$message'");
+            }
+
+            return [
+                'recurring'         => 1,
+                'subscription_id'   => $subscriptionId,
+            ];
+        }
+
+        public function init_form_fields()
+        {
+            parent::init_form_fields();
+            $this->fields = $this->form_fields;
+
+            unset($this->fields['payment_action']);
+
+            $this->form_fields = $this->fields;
+        }
+
+        protected function getDisplayAmount($order)
+        {
+            return $this->subscriptions->getDisplayAmount($order);
+        }
+
+        protected function verifySignature($orderId)
+        {
+            global $woocommerce;
+
+            $api = $this->getRazorpayApiInstance();
+
+            $sessionKey = $this->getSubscriptionSessionKey($orderId);
+
+            $attributes = array(
+                self::RAZORPAY_PAYMENT_ID       => $_POST['razorpay_payment_id'],
+                self::RAZORPAY_SIGNATURE        => $_POST['razorpay_signature'],
+                self::RAZORPAY_SUBSCRIPTION_ID  => $woocommerce->session->get($sessionKey),
             );
 
-            write_log($log);
+            $api->utility->verifyPaymentSignature($attributes);
 
-            exit;
+            add_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
         }
 
-        $amount = $this->getOrderAmountAsInteger($order);
-
-        $success = false;
-        $errorMessage = 'The payment has failed.';
-
-        if ($payment['status'] === 'captured')
+        public function subscription_cancelled($subscription)
         {
-            $success = true;
-        }
-        else if (($payment['status'] === 'authorized') and
-                 ($this->razorpay->payment_action === 'capture'))
-        {
-            //
-            // If the payment is only authorized, we capture it
-            // If the merchant has enabled auto capture
-            //
-            $payment->capture(array('amount' => $amount));
+            $orderIds = array_keys($subscription->get_related_orders());
 
-            $success = true;
-        }
+            $parentOrderId = $orderIds[0];
 
-        $this->razorpay->updateOrder($order, $success, $errorMessage, $razorpayPaymentId, true);
+            $subscriptionId = get_post_meta($parentOrderId, self::RAZORPAY_SUBSCRIPTION_ID)[0];
 
-        exit;
-    }
-
-    /**
-     * Currently we handle only subscription failures using this webhook
-     *
-     * @param $data
-     */
-    protected function paymentFailed(array $data)
-    {
-        $paymentId = $data['payload']['payment']['entity']['id'];
-
-        if (isset($data['payload']['payment']['subscription_id']) === true)
-        {
-            $this->processSubscription($paymentId, false);
-        }
-
-        exit;
-    }
-
-    /**
-     * Helper method used to handle all subscription processing
-     *
-     * @param $orderId
-     * @param string $paymentId
-     * @param $subscriptionId
-     * @param bool $success
-     * @return string|void
-     */
-    protected function processSubscription($paymentId, $subscriptionId, $success = true)
-    {
-        //
-        // If success is false, automatically process subscription failure
-        //
-
-        $api = $this->razorpay->getRazorpayApiInstance();
-
-        try
-        {
-            $subscription = $api->subscription->fetch($subscriptionId);
-        }
-        catch (Exception $e)
-        {
-            $message = $e->getMessage();
-            return 'RAZORPAY ERROR: Subscription fetch failed with the message \'' . $message . '\'';
-        }
-
-        $orderId = $subscription->notes->woocommerce_order_id;
-
-        if ($success === false)
-        {
-            return $this->processSubscriptionFailed($orderId);
-        }
-
-        $this->processSubscriptionSuccess($orderId, $subscription, $paymentId);
-
-        exit;
-    }
-
-    /**
-     * In the case of successful payment, we mark the subscription successful
-     *
-     * @param $orderId
-     * @param $subscription
-     * @param $paymentId
-     */
-    protected function processSubscriptionSuccess($orderId, $subscription, $paymentId)
-    {
-        //
-        // This method is used to process the subscription's recurring payment
-        //
-        $wcSubscription = wcs_get_subscriptions_for_order($orderId);
-
-        $wcSubscriptionId = array_keys($wcSubscription)[0];
-
-        //
-        // We will only process one subscription per order
-        //
-        $wcSubscription = array_values($wcSubscription)[0];
-
-        if (count($wcSubscription) > 1)
-        {
-            $log = array(
-                'Error' => 'There are more than one subscription products in this order'
-            );
-
-            write_log($log);
-
-            exit;
-        }
-
-        $paymentCount = $wcSubscription->get_completed_payment_count();
-
-        //
-        // The subscription is completely paid for
-        //
-        if ($paymentCount === $subscription->total_count)
-        {
-            return;
-        }
-        else if ($paymentCount + 1 === $subscription->paid_count)
-        {
-            //
-            // If subscription has been paid for on razorpay's end, we need to mark the
-            // subscription payment to be successful on woocommerce's end
-            //
-            WC_Subscriptions_Manager::prepare_renewal($wcSubscriptionId);
-
-            $wcSubscription->payment_complete($paymentId);
+            $this->subscriptions->cancelSubscription($subscriptionId);
         }
     }
 
     /**
-     * In the case of payment failure, we mark the subscription as failed
-     *
-     * @param $orderId
-     */
-    protected function processSubscriptionFailed($orderId)
+     * Add the Gateway to WooCommerce
+     **/
+    function woocommerce_add_razorpay_subscriptions_gateway(array $methods)
     {
-        WC_Subscriptions_Manager::process_subscription_payment_failure_on_order($orderId);
+        $methods[] = 'WC_Razorpay_Subscription';
+
+        return $methods;
     }
+
+    add_filter('woocommerce_payment_gateways', 'woocommerce_add_razorpay_subscriptions_gateway');
+}
+
+function razorpay_webhook_subscription_init()
+{
+    $rzpWebhook = new RZP_Subscription_Webhook();
+
+    $rzpWebhook->process();
 }
