@@ -1,330 +1,285 @@
 <?php
 
-use Razorpay\Api\Api;
-use Razorpay\Api\Errors;
-use Razorpay\Woocommerce\Errors as WooErrors;
+$pluginRoot = WP_PLUGIN_DIR . '/' . RAZORPAY_WOOCOMMERCE_PLUGIN;
 
-class RZP_Subscriptions
+require_once $pluginRoot . '/razorpay-payments.php';
+require_once $pluginRoot . '/includes/razorpay-webhook.php';
+require_once $pluginRoot . '/razorpay-sdk/Razorpay.php';
+
+use Razorpay\Api\Errors;
+
+class RZP_Subscription_Webhook extends RZP_Webhook
 {
     protected $razorpay;
+    protected $api;
 
-    const RAZORPAY_PLAN_ID               = 'razorpay_wc_plan_id';
-    const INR                            = 'INR';
+    const PAYMENT_AUTHORIZED   = 'payment.authorized';
+    const PAYMENT_FAILED       = 'payment.failed';
 
-    public function __construct($keyId, $keySecret)
+    function __construct()
     {
-        $this->api = new Api($keyId, $keySecret);
+        $this->razorpay = new WC_Razorpay(false);
 
-        $this->razorpay = new WC_Razorpay();
+        $this->api = $this->razorpay->getRazorpayApiInstance();
     }
 
-    public function createSubscription($orderId)
+    public function process()
     {
-        global $woocommerce;
+        $post = file_get_contents('php://input');
 
-        $subscriptionData = $this->getSubscriptionCreateData($orderId);
+        $data = json_decode($post, true);
 
-        try
+        if (json_last_error() !== 0)
         {
-            $subscription = $this->api->subscription->create($subscriptionData);
-        }
-        catch (Exception $e)
-        {
-            $message = $e->getMessage();
-
-            throw new Errors\Error(
-                $message,
-                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_CREATION_FAILED,
-                400
-            );
+            return;
         }
 
-        // Setting the subscription id as the session variable
-        $sessionKey = $this->getSubscriptionSessionKey($orderId);
-        $woocommerce->session->set($sessionKey, $subscription['id']);
-
-        return $subscription['id'];
-    }
-
-    public function cancelSubscription($subscriptionId)
-    {
-        try
+        if ($this->razorpay->getSetting('enable_webhook') === 'yes' && empty($data['event']) === false)
         {
-            $subscription = $this->api->subscription->cancel($subscriptionId);
-        }
-        catch (Exception $e)
-        {
-            $message = $e->getMessage();
-
-            throw new Errors\Error(
-                $message,
-                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_CANCELLATION_FAILED,
-                400
-            );
-        }
-    }
-
-    protected function getSubscriptionCreateData($orderId)
-    {
-        $order = new WC_Order($orderId);
-
-        $product = $this->getProductFromOrder($order);
-
-        $planId = $this->getProductPlanId($product);
-
-        $customerId = $this->getCustomerId($order);
-
-        $length = (int) WC_Subscriptions_Product::get_length($product['product_id']);
-
-        $subscriptionData = array(
-            'customer_id'     => $customerId,
-            'plan_id'         => $planId,
-            'quantity'        => (int) $product['qty'],
-            'total_count'     => $length,
-            'customer_notify' => 0,
-            'notes'           => array(
-                'woocommerce_order_id'   => $orderId,
-                'woocommerce_product_id' => $product['product_id']
-            ),
-        );
-
-        $signUpFee = WC_Subscriptions_Product::get_sign_up_fee($product['product_id']);
-
-        if ($signUpFee)
-        {
-            $item = array(
-                'amount'   => (int) round($signUpFee * 100),
-                'currency' => get_woocommerce_currency(),
-                'name'     => $product['name']
-            );
-
-            if ($item['currency'] !== self::INR)
+            if ((isset($_SERVER['HTTP_X_RAZORPAY_SIGNATURE']) === true))
             {
-                $this->razorpay->handleCurrencyConversion($item);
+                $razorpayWebhookSecret = $this->razorpay->getSetting('webhook_secret');
+
+                //
+                // If the webhook secret isn't set on wordpress, return
+                //
+                if (empty($razorpayWebhookSecret) === true)
+                {
+                    return;
+                }
+
+                try
+                {
+                    $this->api->utility->verifyWebhookSignature($post,
+                                                                $_SERVER['HTTP_X_RAZORPAY_SIGNATURE'],
+                                                                $razorpayWebhookSecret);
+                }
+                catch (Errors\SignatureVerificationError $e)
+                {
+                    $log = array(
+                        'message'   => $e->getMessage(),
+                        'data'      => $data,
+                        'event'     => 'razorpay.wc.signature..verify_failed'
+                    );
+
+                    write_log($log);
+                    return;
+                }
+
+                switch ($data['event'])
+                {
+                    case self::PAYMENT_AUTHORIZED:
+                        return $this->paymentAuthorized($data);
+
+                    case self::PAYMENT_FAILED:
+                        return $this->paymentFailed($data);
+
+                    default:
+                        return;
+                }
             }
-
-            $subscriptionData['addons'] = array(array('item' => $item));
         }
-
-        return $subscriptionData;
-    }
-
-    protected function getProductPlanId($product)
-    {
-        $currency = get_woocommerce_currency();
-
-        $key = self::RAZORPAY_PLAN_ID . '_'. strtolower($currency);
-
-        $productId = $product['product_id'];
-
-        $metadata = get_post_meta($productId);
-
-        list($planId, $created) = $this->createOrGetPlanId($metadata, $product, $key);
-
-        //
-        // If new plan was created, we delete the old plan id
-        // If we created a new planId, we have to store it as post metadata
-        //
-        if ($created === true)
-        {
-            delete_post_meta($productId, $key);
-
-            add_post_meta($productId, $key, $planId, true);
-        }
-
-        return $planId;
     }
 
     /**
-     * Takes in product metadata and product
-     * Creates or gets created plan
+     * Handling the payment authorized webhook
      *
-     * @param $metadata,
-     * @param $product
-     *
-     * @return string $planId
-     * @return bool $created
+     * @param $data
+     * @return string|void
      */
-    protected function createOrGetPlanId($metadata, $product, $key)
+    protected function paymentAuthorized(array $data)
     {
-        $planArgs = $this->getPlanArguments($product);
+        //
+        // Order entity should be sent as part of the webhook payload
+        //
 
-        //
-        // If razorpay_plan_id is set in the metadata,
-        // we check if the amounts match and return the plan id
-        //
-        if (isset($metadata[$key]) === true)
+        $paymentId = $data['payload']['payment']['entity']['id'];
+
+        if (isset($data['payload']['payment']['entity']['invoice_id']) === true)
         {
-            $create = false;
+            $invoiceId = $data['payload']['payment']['entity']['invoice_id'];
 
-            $planId = $metadata[$key][0];
+            $invoice = $this->api->invoice->fetch($invoiceId);
 
-            try
+            // Process subscription this way
+            if (empty($invoice->subscription_id) === false)
             {
-                $plan = $this->api->plan->fetch($planId);
-            }
-            catch (Exception $e)
-            {
-                //
-                // If plan id fetch causes an error, we re-create the plan
-                //
-                $create = true;
-            }
+                $subscriptionId = $invoice->subscription_id;
 
-            if (($create === false) and
-                ($plan['item']['amount'] === $planArgs['item']['amount']))
-            {
-                return array($plan['id'], false);
+                return $this->processSubscription($paymentId, $subscriptionId);
             }
         }
 
-        //
-        // By default we create a new plan
-        // if metadata doesn't have plan id set
-        //
-        $planId = $this->createPlan($planArgs);
+        $orderId = $data['payload']['payment']['entity']['notes']['woocommerce_order_id'];
 
-        return array($planId, true);
-    }
+        $order = new WC_Order($orderId);
 
-    protected function createPlan($planArgs)
-    {
+        if ($order->needs_payment() === false)
+        {
+            return;
+        }
+
+        $razorpayPaymentId = $data['payload']['payment']['entity']['id'];
+
         try
         {
-            $plan = $this->api->plan->create($planArgs);
+            $payment = $this->api->payment->fetch($razorpayPaymentId);
+        }
+        catch (Exception $e)
+        {
+            $log = array(
+                'message'   => $e->getMessage(),
+                'data'      => $razorpayPaymentId,
+                'event'     => $data['event']
+            );
+
+            write_log($log);
+
+            exit;
+        }
+
+        $amount = $this->getOrderAmountAsInteger($order);
+
+        $success = false;
+        $errorMessage = 'The payment has failed.';
+
+        if ($payment['status'] === 'captured')
+        {
+            $success = true;
+        }
+        else if (($payment['status'] === 'authorized') and
+                 ($this->razorpay->payment_action === 'capture'))
+        {
+            //
+            // If the payment is only authorized, we capture it
+            // If the merchant has enabled auto capture
+            //
+            $payment->capture(array('amount' => $amount));
+
+            $success = true;
+        }
+
+        $this->razorpay->updateOrder($order, $success, $errorMessage, $razorpayPaymentId, true);
+
+        exit;
+    }
+
+    /**
+     * Currently we handle only subscription failures using this webhook
+     *
+     * @param $data
+     */
+    protected function paymentFailed(array $data)
+    {
+        $paymentId = $data['payload']['payment']['entity']['id'];
+
+        if (isset($data['payload']['payment']['subscription_id']) === true)
+        {
+            $this->processSubscription($paymentId, false);
+        }
+
+        exit;
+    }
+
+    /**
+     * Helper method used to handle all subscription processing
+     *
+     * @param $orderId
+     * @param string $paymentId
+     * @param $subscriptionId
+     * @param bool $success
+     * @return string|void
+     */
+    protected function processSubscription($paymentId, $subscriptionId, $success = true)
+    {
+        //
+        // If success is false, automatically process subscription failure
+        //
+
+        $api = $this->razorpay->getRazorpayApiInstance();
+
+        try
+        {
+            $subscription = $api->subscription->fetch($subscriptionId);
         }
         catch (Exception $e)
         {
             $message = $e->getMessage();
+            return 'RAZORPAY ERROR: Subscription fetch failed with the message \'' . $message . '\'';
+        }
 
-            throw new Errors\Error(
-                $message,
-                WooErrors\SubscriptionErrorCode::API_PLAN_CREATION_FAILED,
-                400
+        $orderId = $subscription->notes->woocommerce_order_id;
+
+        if ($success === false)
+        {
+            return $this->processSubscriptionFailed($orderId);
+        }
+
+        $this->processSubscriptionSuccess($orderId, $subscription, $paymentId);
+
+        exit;
+    }
+
+    /**
+     * In the case of successful payment, we mark the subscription successful
+     *
+     * @param $orderId
+     * @param $subscription
+     * @param $paymentId
+     */
+    protected function processSubscriptionSuccess($orderId, $subscription, $paymentId)
+    {
+        //
+        // This method is used to process the subscription's recurring payment
+        //
+        $wcSubscription = wcs_get_subscriptions_for_order($orderId);
+
+        $wcSubscriptionId = array_keys($wcSubscription)[0];
+
+        //
+        // We will only process one subscription per order
+        //
+        $wcSubscription = array_values($wcSubscription)[0];
+
+        if (count($wcSubscription) > 1)
+        {
+            $log = array(
+                'Error' => 'There are more than one subscription products in this order'
             );
+
+            write_log($log);
+
+            exit;
         }
 
-        // Storing the plan id as product metadata, unique set to true
-        return $plan['id'];
-    }
-
-    protected function getPlanArguments($product)
-    {
-        $productId = $product['product_id'];
-
-        $period       = WC_Subscriptions_Product::get_period($productId);
-        $interval     = WC_Subscriptions_Product::get_interval($productId);
-        $recurringFee = WC_Subscriptions_Product::get_price($productId);
+        $paymentCount = $wcSubscription->get_completed_payment_count();
 
         //
-        // Ad-Hoc code
+        // The subscription is completely paid for
         //
-        if ($period === 'year')
+        if ($paymentCount === $subscription->total_count)
         {
-            $period = 'month';
-
-            $interval *= 12;
+            return;
         }
-
-        $planArgs = array(
-            'period'   => $this->getProductPeriod($period),
-            'interval' => $interval
-        );
-
-        $item = array(
-            'name'     => $product['name'],
-            'amount'   => (int) round($recurringFee * 100),
-            'currency' => get_woocommerce_currency(),
-        );
-
-        if ($item['currency'] !== self::INR)
+        else if ($paymentCount + 1 === $subscription->paid_count)
         {
-            $this->razorpay->handleCurrencyConversion($item);
+            //
+            // If subscription has been paid for on razorpay's end, we need to mark the
+            // subscription payment to be successful on woocommerce's end
+            //
+            WC_Subscriptions_Manager::prepare_renewal($wcSubscriptionId);
+
+            $wcSubscription->payment_complete($paymentId);
         }
-
-        $planArgs['item'] = $item;
-
-        return $planArgs;
     }
 
-    public function getDisplayAmount($order)
+    /**
+     * In the case of payment failure, we mark the subscription as failed
+     *
+     * @param $orderId
+     */
+    protected function processSubscriptionFailed($orderId)
     {
-        $product = $this->getProductFromOrder($order);
-
-        $productId = $product['product_id'];
-
-        $recurringFee = WC_Subscriptions_Product::get_price($productId);
-
-        $signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productId);
-
-        return $recurringFee + $signUpFee;
-    }
-
-    protected function getProductPeriod($period)
-    {
-        $periodMap = array(
-            'day'   => 'daily',
-            'week'  => 'weekly',
-            'month' => 'monthly',
-            'year'  => 'yearly'
-        );
-
-        return $periodMap[$period];
-    }
-
-    protected function getCustomerId($order)
-    {
-        $data = $this->razorpay->getCustomerInfo($order);
-
-        //
-        // This line of code tells api that if a customer is already created,
-        // return the created customer instead of throwing an exception
-        // https://docs.razorpay.com/v1/page/customers-api
-        //
-        $data['fail_existing'] = '0';
-
-        try
-        {
-            $customer = $this->api->customer->create($data);
-        }
-        catch (Exception $e)
-        {
-            $message = $e->getMessage();
-
-            throw new Errors\Error(
-                $message,
-                WooErrors\SubscriptionErrorCode::API_CUSTOMER_CREATION_FAILED,
-                400
-            );
-        }
-
-        return $customer['id'];
-    }
-
-    public function getProductFromOrder($order)
-    {
-        $products = $order->get_items();
-
-        //
-        // Technically, subscriptions work only if there's one array in the cart
-        //
-        if (sizeof($products) > 1)
-        {
-            throw new Exception('Currently Razorpay does not support more than'
-                                . ' one product in the cart if one of the products'
-                                . ' is a subscription.');
-        }
-
-        return array_values($products)[0];
-    }
-
-    protected function getSubscriptionSessionKey($orderId)
-    {
-        return 'razorpay_subscription_id' . $orderId;
-    }
-
-    protected function getRazorpayApiInstance()
-    {
-        return new Api($this->keyId, $this->keySecret);
+        WC_Subscriptions_Manager::process_subscription_payment_failure_on_order($orderId);
     }
 }
