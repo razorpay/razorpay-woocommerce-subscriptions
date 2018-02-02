@@ -160,6 +160,18 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         //
         $wcSubscription = array_values($wcSubscription)[0];
 
+        if (count($wcSubscription) === 0)
+        {
+            $log = array(
+                'Error' => 'There are no subscription products in this order'
+            );
+
+            error_log(json_encode($log));
+
+            return;
+        }
+
+
         if (count($wcSubscription) > 1)
         {
             $log = array(
