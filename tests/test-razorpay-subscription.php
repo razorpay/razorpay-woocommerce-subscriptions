@@ -50,5 +50,24 @@ class RazorpaySubscriptionTest extends WP_UnitTestCase
         $this->assertNotContains($rzpSubscriptionGateway, $availableGateways);
     }
 
+    public function test_adminOptions()
+    {
+        $this->rzpObject->admin_options();
 
+        $out = ob_get_clean();
+
+        $this->assertContains('Razorpay Subscriptions Payment Gateway', $out);
+        $this->assertContains('Allows recurring payments by MasterCard/Visa Credit Cards', $out);
+    }
+
+    public function test_fomFields()
+    {
+        $fieldNames = array_keys($this->rzpObject->form_fields);
+
+        $expectedFields = ['enabled', 'title', 'description'];
+
+        $this->assertEquals($expectedFields, $fieldNames);
+
+        $this->assertNotContains('payment_action', $fieldNames);
+    }
 }
