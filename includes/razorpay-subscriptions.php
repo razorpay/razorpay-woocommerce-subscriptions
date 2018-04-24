@@ -306,7 +306,10 @@ class RZP_Subscriptions
     // TODO: Take care of trial period here
     public function getDisplayAmount($order)
     {
-        return $order->get_total();
+        if ((int) $order->get_total() !==0 )
+        {
+            return $order->get_total();
+        }
     }
 
     private function getProductPeriod($period)
