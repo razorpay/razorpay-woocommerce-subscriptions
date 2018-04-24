@@ -111,6 +111,7 @@ function woocommerce_razorpay_subscriptions_init()
                 'key_id',
                 'key_secret',
                 'webhook_secret',
+                'order_success_message',
             );
 
             foreach ($parentSettings as $key)
