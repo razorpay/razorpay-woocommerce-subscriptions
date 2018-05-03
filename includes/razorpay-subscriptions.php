@@ -96,8 +96,6 @@ class RZP_Subscriptions
     {
         $order = new WC_Order($orderId);
 
-        // $sub = $this->getWooCommerceSubscriptionFromOrderId($orderId);
-
         $product = $this->getProductFromOrder($order);
 
         $planId = $this->getProductPlanId($product, $order);
@@ -106,13 +104,19 @@ class RZP_Subscriptions
 
         $length = (int) WC_Subscriptions_Product::get_length($product['product_id']);
 
+        $renewalDate = WC_Subscriptions_Product::get_first_renewal_payment_time($product['product_id']);
+
+        //The first payment is always set as an upfront amount to support woocommerce discounts like fixed
+        // cart discounts which is only for the first payment. The start_date of subscription would be next
+        //renewal date
+
         $subscriptionData = array(
             // TODO: Doesn't work with trial periods currently
-            // 'start_at'        => $sub->get_time('date_created'),
             'customer_id'     => $customerId,
             'plan_id'         => $planId,
             'quantity'        => (int) $product['qty'],
             'total_count'     => $length,
+            'start_at'        => $renewalDate,
             'customer_notify' => 0,
             'notes'           => array(
                 'woocommerce_order_id'   => $orderId,
@@ -120,105 +124,34 @@ class RZP_Subscriptions
             ),
         );
 
-        $signUpFee = WC_Subscriptions_Product::get_sign_up_fee($product['product_id']);
+        // if the first payment after applying discount is zero, create subscription without initial addon
+        //so that token amount would be auto refunded.
 
-        // We pass $subscriptionData and $signUpFee by reference
-        $this->setStartAtAndSignUpFeeIfNeeded($subscriptionData, $signUpFee, $order);
-
-        // We add the signup fee as an addon
-        if ($signUpFee)
+        if ((int) $order->get_total() !== 0)
         {
-            $item = array(
-                'amount'   => (int) round($signUpFee * 100),
-                'currency' => get_woocommerce_currency(),
-                'name'     => $product['name']
-            );
-
-            if ($item['currency'] !== self::INR)
-            {
-                $this->razorpay->handleCurrencyConversion($item);
-            }
-
-            $subscriptionData['addons'] = array(array('item' => $item));
+            $subscriptionData['addons'] = array(array('item' => $this->getUpfrontAmount($order, $product)));
         }
 
         return $subscriptionData;
     }
 
-    /**
-     * @param $subscriptionData
-     * @param $signUpFee
-     * @param $order
-     * @throws Errors\Error
-     */
-    protected function setStartAtAndSignUpFeeIfNeeded(& $subscriptionData, & $signUpFee, $order)
+    protected function getUpfrontAmount($order, $product)
     {
-        $product = $this->getProductFromOrder($order);
+        $amount = (int) round($order->get_total() * 100);
 
-        $metadata = get_post_meta($product['product_id']);
+        $item = array(
+            'amount'       => $amount,
+            'currency'     => get_woocommerce_currency(),
+            'name'         => $product['name'],
+            'description'  => 'wocoommerce_order_id: ' . $order->get_id(),
+        );
 
-        if (empty($metadata['razorpay_wc_start_date']) === false)
+        if ($item['currency'] !== self::INR)
         {
-            //
-            // When custom start date is set, we consider the initial payment
-            // as a sign up payment, and the first recurring payment will be
-            // made on the configured start date on the next month
-            //
-            $startDay = $metadata['razorpay_wc_start_date'][0];
-
-            //
-            // $startDay must be in between 1 and 28
-            //
-            if (($startDay <= 1) or ($startDay >= 28))
-            {
-                throw new Errors\Error(
-                    'Invalid start day saved as subscription product metadata',
-                    WooErrors\SubscriptionErrorCode::SUBSCRIPTION_START_DATE_INVALID,
-                    400
-                );
-            }
-
-            $sub = $this->getWooCommerceSubscriptionFromOrderId($order->get_id());
-
-            $startDate = $this->getStartDate($startDay, $sub);
-
-            // We modify the sign up fee which was passed by reference
-            $signUpFee += $sub->get_total();
-
-            $subscriptionData['start_at'] = $startDate;
-
-            //
-            // In the case where we take the first recurring payment as a up front amount, and the
-            // second recurring payment as the first recurring payment, we reduce the total count by 1
-            //
-            $subscriptionData['total_count'] = $subscriptionData['total_count'] - 1;
+            $this->razorpay->handleCurrencyConversion($item);
         }
-    }
 
-    protected function getStartDate($startDay, $sub)
-    {
-        $period = $sub->get_billing_period();
-
-        $interval = $sub->get_billing_interval();
-
-        $date = new DateTime('now');
-
-        //
-        // We get the date one interval ahead from the current date. The interval depends
-        // on the settings for the subscriptions product. For eg. If the interval is yearly,
-        // and the current date is 21/10/2017, then $oneIntervalAhead would be 21/10/2018.
-        //
-        $oneIntervalAhead = $date->modify("+$interval $period");
-
-        //
-        // We get the start date from the datetime object above and start day saved in the product metadata
-        //
-        $startYear = $oneIntervalAhead->format('Y');
-
-        $startMonth = $oneIntervalAhead->format('m');
-
-        return $oneIntervalAhead->setDate($startYear, $startMonth, $startDay)
-                                ->getTimestamp();
+        return $item;
     }
 
     protected function getProductPlanId($product, $order)
@@ -373,17 +306,10 @@ class RZP_Subscriptions
     // TODO: Take care of trial period here
     public function getDisplayAmount($order)
     {
-        $product = $this->getProductFromOrder($order);
-
-        $productId = $product['product_id'];
-
-        $sub = $this->getWooCommerceSubscriptionFromOrderId($order->get_id());
-
-        $recurringFee = $sub->get_total();
-
-        $signUpFee = WC_Subscriptions_Product::get_sign_up_fee($productId);
-
-        return $recurringFee + $signUpFee;
+        if ((int) $order->get_total() !==0 )
+        {
+            return $order->get_total();
+        }
     }
 
     private function getProductPeriod($period)
@@ -450,4 +376,5 @@ class RZP_Subscriptions
     {
         return self::RAZORPAY_SUBSCRIPTION_ID . $orderId;
     }
+
 }
