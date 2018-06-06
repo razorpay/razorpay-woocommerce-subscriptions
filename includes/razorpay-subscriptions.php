@@ -104,32 +104,49 @@ class RZP_Subscriptions
 
         $length = (int) WC_Subscriptions_Product::get_length($product['product_id']);
 
-        $renewalDate = WC_Subscriptions_Product::get_first_renewal_payment_time($product['product_id']);
-
-        //The first payment is always set as an upfront amount to support woocommerce discounts like fixed
-        // cart discounts which is only for the first payment. The start_date of subscription would be next
-        //renewal date
-
-        $subscriptionData = array(
-            // TODO: Doesn't work with trial periods currently
-            'customer_id'     => $customerId,
-            'plan_id'         => $planId,
-            'quantity'        => (int) $product['qty'],
-            'total_count'     => $length,
-            'start_at'        => $renewalDate,
-            'customer_notify' => 0,
-            'notes'           => array(
-                'woocommerce_order_id'   => $orderId,
-                'woocommerce_product_id' => $product['product_id']
-            ),
-        );
-
-        // if the first payment after applying discount is zero, create subscription without initial addon
-        //so that token amount would be auto refunded.
-
-        if ((int) $order->get_total() !== 0)
+        if ($length === 1)
         {
-            $subscriptionData['addons'] = array(array('item' => $this->getUpfrontAmount($order, $product)));
+            $subscriptionData = array(
+                // TODO: Doesn't work with trial periods currently
+                'customer_id'     => $customerId,
+                'plan_id'         => $planId,
+                'quantity'        => (int) $product['qty'],
+                'start_at'        => $order->get_date_completed(),
+                'total_count'     => 1,
+                'customer_notify' => 0,
+                'notes'           => array(
+                    'woocommerce_order_id'   => $orderId,
+                    'woocommerce_product_id' => $product['product_id'],
+                ),
+            );
+
+            return $subscriptionData;
+        }
+
+        else
+        {
+            $renewalDate = WC_Subscriptions_Product::get_first_renewal_payment_time($product['product_id']);
+
+            $subscriptionData = array(
+                'customer_id' => $customerId,
+                'plan_id'     => $planId,
+                'quantity'    => (int)$product['qty'],
+                'start_at'    => $renewalDate,
+                'total_count' => $length -1,
+                'customer_notify' => 0,
+                'notes' => array(
+                    'woocommerce_order_id' => $orderId,
+                    'woocommerce_product_id' => $product['product_id'],
+                ),
+            );
+
+            // if the first payment after applying discount is zero, create subscription without initial addon
+            //so that token amount would be auto refunded.
+
+            if ((int) $order->get_total() !== 0)
+            {
+                $subscriptionData['addons'] = array( array( 'item' => $this->getUpfrontAmount($order, $product) ) );
+            }
         }
 
         return $subscriptionData;

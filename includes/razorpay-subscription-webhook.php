@@ -173,22 +173,27 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         $paymentCount = $wcSubscription->get_completed_payment_count();
 
-        //
-        // The subscription is completely paid for
-        //
-        if ($paymentCount === $subscription->total_count)
+        $parentOrder = new WC_Order($orderId);
+
+        if( $paymentCount > $subscription->total_count)
         {
             return;
         }
-        else if ($paymentCount + 1 === $subscription->paid_count)
-        {
-            //
-            // If subscription has been paid for on razorpay's end, we need to mark the
-            // subscription payment to be successful on woocommerce's end
-            //
-            WC_Subscriptions_Manager::prepare_renewal($wcSubscriptionId);
 
-            $wcSubscription->payment_complete($paymentId);
+        if ((int)($wcSubscription->is_one_payment() === true) and
+            ($parentOrder->needs_payment() === false))
+        {
+            return;
+        }
+        
+        // If subscription has been paid for on razorpay's end, we need to mark the
+        // subscription payment to be successful on woocommerce's end
+        //
+        WC_Subscriptions_Manager::prepare_renewal($wcSubscriptionId);
+
+        $wcSubscription->payment_complete($paymentId);
+
+        echo "Subscription Charged successfully";
 
             echo "Subscription Charged successfully";
         }
