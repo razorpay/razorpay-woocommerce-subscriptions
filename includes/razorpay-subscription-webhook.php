@@ -129,7 +129,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         //
         if ($success === false)
         {
-            $this->processSubscriptionFailed($orderId);
+            $this->processSubscriptionFailed($orderId, $subscription, $paymentId);
 
             exit;
         }
@@ -180,7 +180,10 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         {
             return;
         }
-        else if ($paymentCount + 1 === $subscription->paid_count)
+
+        $is_first_payment = ( $wcSubscription->get_completed_payment_count() < 1 ) ? true : false;
+
+        if (!$is_first_payment)
         {
             //
             // If subscription has been paid for on razorpay's end, we need to mark the
@@ -199,8 +202,43 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      *
      * @param $orderId
      */
-    protected function processSubscriptionFailed($orderId)
+    protected function processSubscriptionFailed($orderId, $subscription, $paymentId)
     {
-        WC_Subscriptions_Manager::process_subscription_payment_failure_on_order($orderId);
+        $wcSubscription = wcs_get_subscriptions_for_order($orderId);
+        $wcSubscription = array_values($wcSubscription)[0];
+
+        $is_first_payment = ( $wcSubscription->get_completed_payment_count() < 1 ) ? true : false;
+
+        if (!$is_first_payment)
+        {
+            if ( $wcSubscription->has_status( 'active' ) )
+            {
+                $wcSubscription->update_status( 'on-hold' );
+            }
+
+            $renewal_order = $this->get_renewal_order_by_transaction_id( $wcSubscription, $paymentId );
+
+            if ( is_null( $renewal_order ) ) {
+                $renewal_order = wcs_create_renewal_order( $wcSubscription );
+            }
+
+            $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+            $renewal_order->set_payment_method( $available_gateways['razorpay_subscriptions'] );
+        }
+    }
+
+    protected function get_renewal_order_by_transaction_id( $subscription, $transaction_id ) {
+
+        $orders = $subscription->get_related_orders( 'all', 'renewal' );
+        $renewal_order = null;
+
+        foreach ( $orders as $order ) {
+            if ( $order->get_transaction_id() == $transaction_id ) {
+                $renewal_order = $order;
+                break;
+            }
+        }
+
+        return $renewal_order;
     }
 }
