@@ -111,6 +111,8 @@ class RZP_Subscription_Webhook extends RZP_Webhook
     {
         $api = $this->razorpay->getRazorpayApiInstance();
 
+        $subscription = null;
+
         try
         {
             $subscription = $api->subscription->fetch($subscriptionId);
@@ -129,7 +131,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         //
         if ($success === false)
         {
-            $this->processSubscriptionFailed($orderId);
+            $this->processSubscriptionFailed($orderId, $subscription, $paymentId);
 
             exit;
         }
@@ -173,14 +175,26 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         $paymentCount = $wcSubscription->get_completed_payment_count();
 
-        //
+
+        //For single period subscription we are not setting the upfront amount
+        if (($subscription->total_count == 1) and ($paymentCount == 1) and ($subscription->paid_count == 0))
+        {
+            return true;
+        }
+
         // The subscription is completely paid for
-        //
-        if ($paymentCount === $subscription->total_count)
+        if ($paymentCount === $subscription->total_count + 1)
         {
             return;
         }
-        else if ($paymentCount + 1 === $subscription->paid_count)
+
+        //if this is authentication payment count
+        if ($subscription->paid_count == 0)
+        {
+            return;
+        }
+
+        else
         {
             //
             // If subscription has been paid for on razorpay's end, we need to mark the
@@ -190,7 +204,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
             $wcSubscription->payment_complete($paymentId);
 
-            echo "Subscription Charged successfully";
+            error_log("Subscription Charged successfully");
         }
     }
 
@@ -199,8 +213,43 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      *
      * @param $orderId
      */
-    protected function processSubscriptionFailed($orderId)
+    protected function processSubscriptionFailed($orderId, $subscription, $paymentId)
     {
-        WC_Subscriptions_Manager::process_subscription_payment_failure_on_order($orderId);
+        $wcSubscription = wcs_get_subscriptions_for_order($orderId);
+        $wcSubscription = array_values($wcSubscription)[0];
+
+        $is_first_payment = ( $wcSubscription->get_completed_payment_count() < 1 );
+
+        if (!$is_first_payment)
+        {
+            if ( $wcSubscription->has_status( 'active' ) )
+            {
+                $wcSubscription->update_status( 'on-hold' );
+            }
+
+            $renewal_order = $this->get_renewal_order_by_transaction_id( $wcSubscription, $paymentId );
+
+            if ( is_null( $renewal_order ) ) {
+                $renewal_order = wcs_create_renewal_order( $wcSubscription );
+            }
+
+            $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+            $renewal_order->set_payment_method( $available_gateways['razorpay'] );
+        }
+    }
+
+    protected function get_renewal_order_by_transaction_id($subscription, $transaction_id ) {
+
+        $orders = $subscription->get_related_orders( 'all', 'renewal' );
+        $renewal_order = null;
+
+        foreach ($orders as $order) {
+            if ( $order->get_transaction_id() == $transaction_id ) {
+                $renewal_order = $order;
+                break;
+            }
+        }
+
+        return $renewal_order;
     }
 }
