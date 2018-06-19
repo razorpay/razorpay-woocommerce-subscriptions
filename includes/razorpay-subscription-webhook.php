@@ -111,6 +111,8 @@ class RZP_Subscription_Webhook extends RZP_Webhook
     {
         $api = $this->razorpay->getRazorpayApiInstance();
 
+        $subscription = null;
+
         try
         {
             $subscription = $api->subscription->fetch($subscriptionId);
@@ -175,16 +177,12 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
 
         //For single period subscription we are not setting the upfront amount
-
-
-        if (($subscription->total_count ==1) and ($paymentCount == 1) and ($subscription->paid_count ===0))
+        if (($subscription->total_count == 1) and ($paymentCount == 1) and ($subscription->paid_count == 0))
         {
             return true;
         }
 
-        //
         // The subscription is completely paid for
-        //
         if ($paymentCount === $subscription->total_count + 1)
         {
             return;
@@ -245,7 +243,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         $orders = $subscription->get_related_orders( 'all', 'renewal' );
         $renewal_order = null;
 
-        foreach ( $orders as $order ) {
+        foreach ($orders as $order) {
             if ( $order->get_transaction_id() == $transaction_id ) {
                 $renewal_order = $order;
                 break;
