@@ -220,7 +220,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         $wcSubscription = wcs_get_subscriptions_for_order($orderId);
         $wcSubscription = array_values($wcSubscription)[0];
 
-        $is_first_payment = ( $wcSubscription->get_completed_payment_count() < 1 ) ? true : false;
+        $is_first_payment = ( $wcSubscription->get_completed_payment_count() < 1 );
 
         if (!$is_first_payment)
         {
@@ -236,7 +236,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             }
 
             $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
-            $renewal_order->set_payment_method( $available_gateways['razorpay_subscriptions'] );
+            $renewal_order->set_payment_method( $available_gateways['razorpay'] );
         }
     }
 
