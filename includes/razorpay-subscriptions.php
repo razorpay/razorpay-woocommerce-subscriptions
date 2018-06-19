@@ -115,7 +115,7 @@ class RZP_Subscriptions
             'customer_id'     => $customerId,
             'plan_id'         => $planId,
             'quantity'        => (int) $product['qty'],
-            'total_count'     => $length,
+            'total_count'     => $length -1,
             'start_at'        => $renewalDate,
             'customer_notify' => 0,
             'notes'           => array(
