@@ -173,9 +173,11 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         $paymentCount = $wcSubscription->get_completed_payment_count();
 
+
         //For single period subscription we are not setting the upfront amount
 
-        if (($subscription->total_count ==1) and ($paymentCount == 1))
+
+        if (($subscription->total_count ==1) and ($paymentCount == 1) and ($subscription->paid_count ===0))
         {
             return true;
         }
@@ -204,7 +206,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
             $wcSubscription->payment_complete($paymentId);
 
-            echo "Subscription Charged successfully";
+            error_log("Subscription Charged successfully");
         }
     }
 
