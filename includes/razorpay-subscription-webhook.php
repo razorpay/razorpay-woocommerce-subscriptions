@@ -173,6 +173,13 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         $paymentCount = $wcSubscription->get_completed_payment_count();
 
+        //For single period subscription we are not setting the upfront amount
+
+        if (($subscription->total_count ==1) and ($paymentCount == 1))
+        {
+            return true;
+        }
+
         //
         // The subscription is completely paid for
         //

@@ -110,6 +110,23 @@ class RZP_Subscriptions
         // cart discounts which is only for the first payment. The start_date of subscription would be next
         //renewal date
 
+        if ($length ==1)
+        {
+            $subscriptionData = array(
+                'customer_id'     => $customerId,
+                'plan_id'         => $planId,
+                'quantity'        => (int) $product['qty'],
+                'total_count'     => $length,
+                'customer_notify' => 0,
+                'notes'           => array(
+                    'woocommerce_order_id'   => $orderId,
+                    'woocommerce_product_id' => $product['product_id']
+                ),
+            );
+
+            return $subscriptionData;
+        }
+
         $subscriptionData = array(
             // TODO: Doesn't work with trial periods currently
             'customer_id'     => $customerId,
