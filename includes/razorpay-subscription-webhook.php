@@ -227,7 +227,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         }
     }
 
-    protected function get_renewal_order_by_transaction_id( $subscription, $transaction_id ) {
+    protected function get_renewal_order_by_transaction_id($subscription, $transaction_id ) {
 
         $orders = $subscription->get_related_orders( 'all', 'renewal' );
         $renewal_order = null;
