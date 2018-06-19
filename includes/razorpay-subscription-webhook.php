@@ -176,14 +176,18 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         //
         // The subscription is completely paid for
         //
-        if ($paymentCount === $subscription->total_count)
+        if ($paymentCount === $subscription->total_count + 1)
         {
             return;
         }
 
-        $is_first_payment = ( $wcSubscription->get_completed_payment_count() < 1 ) ? true : false;
+        //if this is authentication payment count
+        if ($subscription->paid_count == 0)
+        {
+            return;
+        }
 
-        if (!$is_first_payment)
+        else
         {
             //
             // If subscription has been paid for on razorpay's end, we need to mark the
