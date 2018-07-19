@@ -153,7 +153,13 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         //
         // This method is used to process the subscription's recurring payment
         //
-        $wcSubscription = wcs_get_subscriptions_for_order($orderId);
+
+        $wcSubscription = $this->get_woocoommerce_subscriptions_for_order($orderId);
+
+        if ($wcSubscription === null)
+        {
+            return;
+        }
 
         $wcSubscriptionId = array_keys($wcSubscription)[0];
 
@@ -215,8 +221,15 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      */
     protected function processSubscriptionFailed($orderId, $subscription, $paymentId)
     {
-        $wcSubscription = wcs_get_subscriptions_for_order($orderId);
+        $wcSubscription = $this->get_woocoommerce_subscriptions_for_order($orderId);
+
+        if ($wcSubscription === null)
+        {
+            return;
+        }
+
         $wcSubscription = array_values($wcSubscription)[0];
+
 
         $is_first_payment = ( $wcSubscription->get_completed_payment_count() < 1 );
 
@@ -251,5 +264,23 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         }
 
         return $renewal_order;
+    }
+
+    protected function get_woocoommerce_subscriptions_for_order($orderId)
+    {
+        $wcSubscription = wcs_get_subscriptions_for_order($orderId);
+
+        if (empty($wcSubscription) === true)
+        {
+             $log = array(
+                'Error' =>  'woocommerce Subscription Not Found  woocommerce Order Id -'. $orderId,
+             );
+
+             error_log(json_encode($log));
+
+            return null;
+        }
+
+        return $wcSubscription;
     }
 }
