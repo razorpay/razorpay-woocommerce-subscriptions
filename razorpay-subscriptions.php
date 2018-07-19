@@ -221,11 +221,20 @@ function woocommerce_razorpay_subscriptions_init()
         {
             $this->subscriptions = new RZP_Subscriptions($this->getSetting('key_id'), $this->getSetting('key_secret'));
 
-            $orderIds = array_keys($subscription->get_related_orders());
+            $parentOrder = $subscription->get_parent();
 
-            $parentOrderId = $orderIds[0];
+            if (empty($parentOrder) === true)
+            {
+                $log = array(
+                    'Error' =>  'Unanle tp'. $parentOrder,
+                );
 
-            $subscriptionId = get_post_meta($parentOrderId, self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                error_log(json_encode($log));
+
+                return ;
+            }
+
+            $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
 
             $this->subscriptions->cancelSubscription($subscriptionId);
         }
