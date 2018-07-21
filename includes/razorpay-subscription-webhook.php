@@ -179,6 +179,13 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             return;
         }
 
+        $renewal_order = $this->get_renewal_order_by_transaction_id( $wcSubscription, $paymentId );
+
+        if (empty($renewal_order) === false)
+        {
+            return;
+        }
+
         $paymentCount = $wcSubscription->get_completed_payment_count();
 
 
@@ -208,9 +215,13 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             //
             WC_Subscriptions_Manager::prepare_renewal($wcSubscriptionId);
 
-            $wcSubscription->payment_complete($paymentId);
+            if ($wcSubscription->needs_payment() === true)
+            {
+                $wcSubscription->payment_complete($paymentId);
 
-            error_log("Subscription Charged successfully");
+                error_log("Subscription Charged successfully");
+            }
+
         }
     }
 
