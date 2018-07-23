@@ -35,6 +35,8 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         // Order entity should be sent as part of the webhook payload
         //
 
+        error_log("Hook Starts");
+
         $paymentId = $data['payload']['payment']['entity']['id'];
 
         if (isset($data['payload']['payment']['entity']['invoice_id']) === true)
@@ -77,6 +79,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
     protected function getSubscriptionId($invoiceId, $event)
     {
+        $startTime = time();
         $api = $this->razorpay->getRazorpayApiInstance();
 
         try
@@ -96,6 +99,9 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             exit;
         }
 
+        $endTime = time();
+
+        error_log('it took'. ($endTime - $startTime) . 'ms to execute'.  __FUNCTION__);
         return $invoice->subscription_id;
     }
 
@@ -109,13 +115,28 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      */
     protected function processSubscription($paymentId, $subscriptionId, $success = true)
     {
+
+        error_log('Starting function'.  __FUNCTION__);
+
+       $startTime = time();
+
         $api = $this->razorpay->getRazorpayApiInstance();
 
         $subscription = null;
 
         try
         {
+            error_log('Fetching Razorpay Subscription');
+            $timeBeforeApiFetch = time();
+
             $subscription = $api->subscription->fetch($subscriptionId);
+
+            $timeAfterApiFetch = time();
+
+            $timeDiff = $timeAfterApiFetch - $timeBeforeApiFetch;
+
+            error_log('it took  '. $timeDiff . ' ms to fetch Razorpay subscription');
+
         }
         catch (Exception $e)
         {
@@ -123,6 +144,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
             return "RAZORPAY ERROR: Subscription fetch failed with the message $message";
         }
+
 
         $orderId = $subscription->notes[WC_Razorpay::WC_ORDER_ID];
 
@@ -133,10 +155,18 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         {
             $this->processSubscriptionFailed($orderId, $subscription, $paymentId);
 
+           error_log("Subscription Failed");
+
             exit;
         }
 
         $this->processSubscriptionSuccess($orderId, $subscription, $paymentId);
+
+        $endTime  = time();
+
+        error_log('It took ' . ($endTime - $startTime). ' ms to process. '.  __FUNCTION__ );
+
+        error_log('Completed Process Subscription');
 
         exit;
     }
@@ -153,6 +183,8 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         //
         // This method is used to process the subscription's recurring payment
         //
+
+        error_log('Starting with  ' . __FUNCTION__ . ' Time  is now '.  time());
 
         $wcSubscription = $this->get_woocoommerce_subscriptions_for_order($orderId);
 
@@ -183,46 +215,83 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         if (empty($renewal_order) === false)
         {
+            error_log('Renewal Order Exists');
+
             return;
         }
 
+        $timeBefFetchingCompletedOrder = time();
+
         $paymentCount = $wcSubscription->get_completed_payment_count();
 
+        $ttimeAfterCompletingOrder = time();
+
+        error_log('it takes '.  ($timeBefFetchingCompletedOrder - $timeBefFetchingCompletedOrder). 'to get completed Payment Count');
 
         //For single period subscription we are not setting the upfront amount
         if (($subscription->total_count == 1) and ($paymentCount == 1) and ($subscription->paid_count == 0))
         {
+            error_log('The Code executed till ' . __LINE__ . ' Time taken is '.  time());
+
             return true;
         }
 
         // The subscription is completely paid for
         if ($paymentCount === $subscription->total_count + 1)
         {
+            error_log('The Code executed till ' . __LINE__ . ' Time taken is '.  time());
+
+
             return;
         }
 
         //if this is authentication payment count
         if ($subscription->paid_count == 0)
         {
+            error_log('The Code executed till ' . __LINE__ . ' Time taken is '.  time());
+
             return;
         }
 
         else
         {
+            error_log('The Code executed till ' . __LINE__ . ' Time taken is '.  time());
+
+            $timeBeforeRenewalOrder = time();
             //
             // If subscription has been paid for on razorpay's end, we need to mark the
             // subscription payment to be successful on woocommerce's end
             //
             WC_Subscriptions_Manager::prepare_renewal($wcSubscriptionId);
 
+            $timeAfterRenewalOrder = time();
+
+            $diff = $timeAfterRenewalOrder - $timeBeforeRenewalOrder;
+
+            error_log('It takes' . $diff . 'ms to process renewal order');
+
+            error_log('Renewal Order Created');
+
             if ($wcSubscription->needs_payment() === true)
             {
+                error_log("need Payment");
+
+                $timeBeforePaymentComplete = time();
+
                 $wcSubscription->payment_complete($paymentId);
 
-                error_log("Subscription Charged successfully");
+                error_log("Payment Complete");
+
+                $timeAfterPaymentComplte = time();
+
+                error_log('takes ' . ($timeAfterPaymentComplte - $timeBeforePaymentComplete) .'to update order status to payment complete');
+
             }
 
         }
+
+        error_log('Completed'.  __FUNCTION__);
+
     }
 
     /**
@@ -264,8 +333,11 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
     protected function get_renewal_order_by_transaction_id($subscription, $transaction_id ) {
 
+        $currentTime = time();
         $orders = $subscription->get_related_orders( 'all', 'renewal' );
         $renewal_order = null;
+
+        error_log('The Code executed till ' . __LINE__ . ' Time taken is '.  time());
 
         foreach ($orders as $order) {
             if ( $order->get_transaction_id() == $transaction_id ) {
@@ -273,6 +345,10 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 break;
             }
         }
+
+        error_log('The Code executed till ' . __LINE__ . ' Time taken is '.  time());
+
+        error_log('It took '.  ($currentTime - $currentTime) . 'ms to execute  ' . __FUNCTION__ );
 
         return $renewal_order;
     }
