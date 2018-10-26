@@ -8,7 +8,7 @@ Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Allows you to use Razorpay payment gateway with the WooCommerce Subscriptions plugin. This requires Subscriptions feature to be enabled for your account. Please reach out at <support@razorpay.com> for the same.
+Allows you to use Razorpay payment gateway with the WooCommerce Subscriptions plugin. This requires Subscriptions feature to be enabled for your account. Please reach out at <razorpay.com/support> for the same.
 
 == Description ==
 
@@ -54,7 +54,7 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 
 == Support ==
 
-Visit [razorpay.com](https://razorpay.com) for support requests or email us at <integrations@razorpay.com>.
+Visit [razorpay.com](https://razorpay.com) for support requests or write to us at <razorpay.com/support>.
 
 == License ==
 
