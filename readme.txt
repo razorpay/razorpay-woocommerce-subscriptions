@@ -4,11 +4,11 @@ Tags: razorpay, payments, india, woocommerce, ecommerce, recurring, subscription
 Requires at least: 3.9.2
 Requires PHP: 5.6.0
 Tested up to: 4.8.2
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Allows you to use Razorpay payment gateway with the WooCommerce Subscriptions plugin. This requires Subscriptions feature to be enabled for your account. Please reach out at <razorpay.com/support> for the same.
+Allows you to use Razorpay payment gateway with the WooCommerce Subscriptions plugin. This requires Subscriptions feature to be enabled for your account. Please reach out at <https://razorpay.com/support/> for the same.
 
 == Description ==
 
@@ -47,6 +47,9 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 
 == Changelog ==
 
+= 1.0.2 =
+* Fix Support Links
+
 = 1.0.1 =
 * Bug fix: disallowing plugin usage if base plugin directory doesn't exist
 
@@ -54,7 +57,7 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 
 == Support ==
 
-Visit [razorpay.com](https://razorpay.com) for support requests or write to us at <razorpay.com/support>.
+Visit [razorpay.com/support](https://razorpay.com/support/) for support requests.
 
 == License ==
 
