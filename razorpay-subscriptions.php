@@ -24,7 +24,7 @@ if ( ! is_dir( $pluginRoot ) )
     return;
 }
 
-require_once $pluginRoot . '/razorpay-payments.php';
+require_once $pluginRoot . '/woo-razorpay.php';
 require_once $pluginRoot . '/razorpay-sdk/Razorpay.php';
 require_once __DIR__ . '/includes/razorpay-subscription-webhook.php';
 require_once __DIR__ . '/includes/Errors/SubscriptionErrorCode.php';
