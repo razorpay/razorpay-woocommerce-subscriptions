@@ -104,6 +104,13 @@ class RZP_Subscriptions
 
         $length = (int) WC_Subscriptions_Product::get_length($product['product_id']);
 
+        //Subscription will not work in case of never expire case.
+
+        if ($length == 0)
+        {
+            throw new Exception('Perpetual subscriptions are not supported.');
+        }
+
         //The first payment is always set as an upfront amount to support woocommerce discounts like fixed
         // cart discounts which is only for the first payment.
 
@@ -126,11 +133,6 @@ class RZP_Subscriptions
         if ($signUpFee)
         {
             $subscriptionData['addons'] = array(array('item' => $this->getUpfrontAmount($signUpFee, $order, $product)));
-        }
-
-        if ($length ==1)
-        {
-            return $subscriptionData;
         }
 
         $trial_length     = WC_Subscriptions_Product::get_trial_length( $product['product_id'] );
