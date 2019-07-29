@@ -3,7 +3,7 @@ Contributors: razorpay
 Tags: razorpay, payments, india, woocommerce, ecommerce, recurring, subscriptions, inr
 Requires at least: 3.9.2
 Requires PHP: 5.6.0
-Tested up to: 4.8.2
+Tested up to: 5.2.2
 Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -14,7 +14,7 @@ Allows you to use Razorpay payment gateway with the WooCommerce Subscriptions pl
 
 This is the official Razorpay Subscriptions payment gateway plugin for WooCommerce. Allows you to accept recurring payments on WooCommerce Subscriptions using the Razorpay Subscriptions API.
 
-This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has been tested upto the 3.1.2 WooCommerce release. This also requires the WooCommerce Subscriptions plugin to be installed on your server. (Tested upto 2.2.10 version of the WooCommerce Subscriptions release).
+This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has been tested upto the 3.6.5 WooCommerce release. This also requires the WooCommerce Subscriptions plugin to be installed on your server. (Tested upto 2.5.6 version of the WooCommerce Subscriptions release).
 
 == Installation ==
 
@@ -27,7 +27,7 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 1. Wordpress v3.9.2 and later
 2. WooCommerce v2.4 and later
 3. WooCommerce Subscriptions v2.2 and later
-4. [Razorpay WooCommerce Plugin](https://wordpress.org/plugins/woo-razorpay/) 1.6.0 and later
+4. [Razorpay WooCommerce Plugin](https://wordpress.org/plugins/woo-razorpay/) 2.0.0 and later
 5. PHP v5.6.0 and later
 6. php-curl
 
@@ -49,6 +49,9 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 
 = 1.0.2 =
 * Fix Support Links
+* Handled never expiry subscription exception
+* Handled upfront payment in case of single subscription opt
+* Compatible with razorpay-woocommerce 2.x
 
 = 1.0.1 =
 * Bug fix: disallowing plugin usage if base plugin directory doesn't exist
