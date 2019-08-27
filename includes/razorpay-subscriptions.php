@@ -38,6 +38,13 @@ class RZP_Subscriptions
 
     }
 
+    /**
+     * Create subscription for customer.
+     *
+     * @param $orderId
+     * @return mixed
+     * @throws Exception
+     */
     public function createSubscription($orderId)
     {
         global $woocommerce;
@@ -67,6 +74,12 @@ class RZP_Subscriptions
         return $subscription['id'];
     }
 
+    /**
+     * Method for cancel subscription of client.
+     *
+     * @param $subscriptionId
+     * @throws Errors\Error
+     */
     public function cancelSubscription($subscriptionId)
     {
         try
@@ -124,6 +137,7 @@ class RZP_Subscriptions
                 'woocommerce_order_id'   => $orderId,
                 'woocommerce_product_id' => $product['product_id']
             ),
+            'source'          => 'WooCommerce'
         );
 
         $signUpFee = WC_Subscriptions_Product::get_sign_up_fee($product['product_id']);
@@ -161,11 +175,6 @@ class RZP_Subscriptions
             'description'  => 'wocoommerce_order_id: ' . $order->get_id(),
         );
 
-        if ($item['currency'] !== self::INR)
-        {
-            $this->razorpay->handleCurrencyConversion($item);
-        }
-
         return $item;
     }
 
@@ -199,6 +208,7 @@ class RZP_Subscriptions
      * @param $product
      * @param $order
      * @return array
+     * @throws Errors\Error
      */
     protected function createOrGetPlanId($metadata, $product, $order)
     {
@@ -288,17 +298,11 @@ class RZP_Subscriptions
             'interval' => $interval
         );
 
-        // TODO: Should convert to INR if currency is USD
         $item = array(
             'name'     => $product['name'],
             'amount'   => (int) round($recurringFee * 100),
             'currency' => get_woocommerce_currency(),
         );
-
-        if ($item['currency'] !== self::INR)
-        {
-            $this->razorpay->handleCurrencyConversion($item);
-        }
 
         $planArgs['item'] = $item;
 
@@ -311,6 +315,7 @@ class RZP_Subscriptions
 
         $hashInput = implode('|', [
             $item['amount'],
+            $item['currency'],
             $planArgs['period'],
             $planArgs['interval']
         ]);
@@ -327,6 +332,10 @@ class RZP_Subscriptions
         }
     }
 
+    /**
+     * @param $period
+     * @return mixed
+     */
     private function getProductPeriod($period)
     {
         $periodMap = array(
@@ -339,6 +348,11 @@ class RZP_Subscriptions
         return $periodMap[$period];
     }
 
+    /**
+     * @param $order
+     * @return mixed
+     * @throws Errors\Error
+     */
     protected function getCustomerId($order)
     {
         $data = $this->razorpay->getCustomerInfo($order);
@@ -368,6 +382,11 @@ class RZP_Subscriptions
         return $customer['id'];
     }
 
+    /**
+     * @param $order
+     * @return mixed
+     * @throws Exception
+     */
     public function getProductFromOrder($order)
     {
         $products = $order->get_items();
@@ -387,6 +406,10 @@ class RZP_Subscriptions
         return array_values($products)[0];
     }
 
+    /**
+     * @param $orderId
+     * @return string
+     */
     protected function getSubscriptionSessionKey($orderId)
     {
         return self::RAZORPAY_SUBSCRIPTION_ID . $orderId;
