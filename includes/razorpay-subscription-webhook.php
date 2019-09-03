@@ -108,11 +108,9 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      */
     protected function getSubscriptionId($invoiceId, $event)
     {
-        $api = $this->razorpay->getRazorpayApiInstance();
-
         try
         {
-            $invoice = $api->invoice->fetch($invoiceId);
+            $invoice = $this->api->invoice->fetch($invoiceId);
         }
         catch (Exception $e)
         {
@@ -141,13 +139,11 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      */
     protected function processSubscription($paymentId, $subscriptionId, $success = true)
     {
-        $api = $this->razorpay->getRazorpayApiInstance();
-
         $subscription = null;
 
         try
         {
-            $subscription = $api->subscription->fetch($subscriptionId);
+            $subscription = $this->api->subscription->fetch($subscriptionId);
         }
         catch (Exception $e)
         {
@@ -358,13 +354,11 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      */
     protected function cancelSubscription($subscriptionId)
     {
-        $api = $this->razorpay->getRazorpayApiInstance();
-
         $subscription = null;
 
         try
         {
-            $subscription = $api->subscription->fetch($subscriptionId);
+            $subscription = $this->api->subscription->fetch($subscriptionId);
         }
         catch (Exception $e)
         {
