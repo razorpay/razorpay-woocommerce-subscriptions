@@ -1,10 +1,10 @@
 === Razorpay Subscriptions for WooCommerce ===
 Contributors: razorpay
-Tags: razorpay, payments, india, woocommerce, ecommerce, recurring, subscriptions, inr
+Tags: razorpay, payments, india, woocommerce, ecommerce, recurring, subscriptions
 Requires at least: 3.9.2
 Requires PHP: 5.6.0
 Tested up to: 5.2.2
-Stable tag: 2.0.0
+Stable tag: 2.1.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ Allows you to use Razorpay payment gateway with the WooCommerce Subscriptions pl
 
 This is the official Razorpay Subscriptions payment gateway plugin for WooCommerce. Allows you to accept recurring payments on WooCommerce Subscriptions using the Razorpay Subscriptions API.
 
-This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has been tested upto the 3.6.5 WooCommerce release. This also requires the WooCommerce Subscriptions plugin to be installed on your server. (Tested upto 2.5.6 version of the WooCommerce Subscriptions release).
+This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has been tested upto the 3.7.0 WooCommerce release. This also requires the WooCommerce Subscriptions plugin to be installed on your server. (Tested upto 2.5.7 version of the WooCommerce Subscriptions release).
 
 == Installation ==
 
@@ -42,10 +42,14 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 
 1. We currently do not support lifetime subscriptions as of now. The maximum time that a subscription is allowed to run without requiring an authentication again from the customer is 10 years.
 2. Please make sure that you have Webhooks setup on the [Razorpay Plugin](https://wordpress.org/plugins/woo-razorpay/) to ensure that recurring payments are marked as paid on WooCommerce.
-3. For international acceptance, please see our [Multi-Currency Guide](https://github.com/razorpay/razorpay-woocommerce/wiki/Multi-Currency) for the Razorpay WooCommerce plugin.
-4. We do not support subscription items with a trial period as of now. We plan to implement this soon.
 
 == Changelog ==
+
+= 2.1.0
+* Support international currency
+* Handled duplicate notification for single webhook
+* Add feature after cancel subscription from razorpay dashboard, cancelled subscription at woo-commerce dashboard also
+* Bug fix: Resolve repetition of new order after successfully retry charge.
 
 = 2.0.0 =
 * Fix Support Links
