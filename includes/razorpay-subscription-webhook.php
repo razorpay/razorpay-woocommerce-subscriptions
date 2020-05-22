@@ -243,19 +243,41 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         else
         {
-            //
-            // If subscription has been paid for on razorpay's end, we need to mark the
-            // subscription payment to be successful on woocommerce's end
-            //
-            WC_Subscriptions_Manager::prepare_renewal($wcSubscriptionId);
-
-            if ($wcSubscription->needs_payment() === true)
+            if ( ! empty( $wcSubscription ) && ($wcSubscription->has_status( 'active' ) || $wcSubscription->has_status( 'on-hold' )) && ( 0 == $wcSubscription->get_total() || $wcSubscription->is_manual() || '' == $wcSubscription->get_payment_method() || ! $wcSubscription->payment_method_supports( 'gateway_scheduled_payments' ) ) )
             {
-                $wcSubscription->payment_complete($paymentId);
 
-                $this->update_next_payment_date($subscription, $wcSubscription);
+                $order_note = 'Subscription renewal payment due:';
+                
+                // Always put the subscription on hold in case something goes wrong while trying to process renewal
+                $wcSubscription->update_status( 'on-hold', $order_note );
+                
+                //
+                // If subscription has been paid for on razorpay's end, we need to mark the
+                // subscription payment to be successful on woocommerce's end
+                //
+                // WC_Subscriptions_Manager::prepare_renewal($wcSubscriptionId);
+                $last_order = $wcSubscription->get_last_order( 'all', 'any' );
 
-                error_log("Subscription Charged successfully");
+                if ( false !== $last_order && $last_order->needs_payment() )
+                {
+                    $last_order = $this->save_renewal_order($last_order, $paymentId );
+                }
+                else
+                {
+                    $last_order = $this->create_renewal_order( $wcSubscription, $paymentId );
+                }
+                
+                if ($wcSubscription->needs_payment() === true)
+                {
+                    $last_order->update_status( 'completed' );
+                    $wcSubscription->update_status( 'active' );
+                    $this->update_next_payment_date($subscription, $wcSubscription);
+                    error_log("Subscription Charged successfully");
+                }
+            }
+            else
+            {
+                return;
             }
 
         }
@@ -290,19 +312,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 $wcSubscription->update_status( 'on-hold' );
             }
 
-            $renewal_order = $this->get_renewal_order_by_transaction_id( $wcSubscription, $paymentId );
-
-            if ( is_null( $renewal_order ) ) {
-                $renewal_order = wcs_create_renewal_order( $wcSubscription );
-            }
-
-            $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
-
-            $renewal_order->set_payment_method( $available_gateways['razorpay'] );
-
-            $renewal_order->set_transaction_id( $paymentId );
-
-            $renewal_order->save();
+            $renewal_order = $this->create_renewal_order($wcSubscription, $paymentId);
         }
     }
 
@@ -319,7 +329,8 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         $renewal_order = null;
 
         foreach ($orders as $order) {
-            if ( $order->get_transaction_id() == $transaction_id ) {
+            if ( $order->get_transaction_id() == $transaction_id )
+            {
                 $renewal_order = $order;
                 break;
             }
@@ -328,6 +339,54 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         return $renewal_order;
     }
 
+    /**
+     * Create renewal order for specific transaction.
+     *
+     * @param $wcSubscription
+     * @param $paymentId
+     * @return |null
+     */
+    protected function create_renewal_order($wcSubscription, $paymentId)
+    {
+        $renewal_order = $this->get_renewal_order_by_transaction_id( $wcSubscription, $paymentId );
+
+        if ( is_null( $renewal_order ) )
+        {
+            $renewal_order = wcs_create_renewal_order( $wcSubscription );
+        }
+
+        $renewal_order = $this->save_renewal_order($renewal_order, $paymentId);
+
+        return $renewal_order;
+    }
+
+    /**
+     * Save renewal order for specific transaction.
+     *
+     * @param $renewal_order
+     * @param $paymentId
+     * @return |null
+     */
+    protected function save_renewal_order($renewal_order, $paymentId)
+    {
+        $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+
+        $renewal_order->set_payment_method( $available_gateways['razorpay'] );
+
+        $renewal_order->set_transaction_id( $paymentId );
+
+        $renewal_order->save();
+
+        return $renewal_order;
+    }
+
+    /**
+     * Get Subscription for specific OrderId
+     *
+     * @param $wcSubscription
+     * @param $paymentId
+     * @return |null
+     */
     protected function get_woocoommerce_subscriptions_for_order($orderId)
     {
         $wcSubscription = wcs_get_subscriptions_for_order($orderId);
@@ -407,12 +466,13 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      */
     protected static function update_next_payment_date($subscription, $wcSubscription)
     {
-        if($subscription->paid_count === $subscription->total_count) {
-
+        if($subscription->paid_count === $subscription->total_count)
+        {
             $new_payment_date = 0;
 
-        } else {
-
+        } 
+        else 
+        {
             $new_payment_timestamp = $subscription->current_end;
 
             $new_payment_timestamp = ( is_numeric( $new_payment_timestamp ) ) ? $new_payment_timestamp : wcs_date_to_time( $new_payment_timestamp );
@@ -426,7 +486,9 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
             error_log("Next payment date updated successfully");
 
-        } catch ( Exception $e ) {
+        } 
+        catch ( Exception $e ) 
+        {
             error_log('invalid-date', $e->getMessage());
         }
     }
