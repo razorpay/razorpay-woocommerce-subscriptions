@@ -355,9 +355,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             $renewal_order = wcs_create_renewal_order( $wcSubscription );
         }
 
-        $payment_method = $wcSubscription->get_payment_method();
-
-        $renewal_order = $this->save_renewal_order($renewal_order, $paymentId, $payment_method);
+        $renewal_order = $this->save_renewal_order($renewal_order, $paymentId);
 
         return $renewal_order;
     }
@@ -369,9 +367,11 @@ class RZP_Subscription_Webhook extends RZP_Webhook
      * @param $paymentId
      * @return |null
      */
-    protected function save_renewal_order($renewal_order, $paymentId, $payment_method)
+    protected function save_renewal_order($renewal_order, $paymentId)
     {
-        $renewal_order->set_payment_method( $payment_method );
+        $available_gateways = WC()->payment_gateways->payment_gateways();
+
+        $renewal_order->set_payment_method( $available_gateways['razorpay_subscriptions'] );
 
         $renewal_order->set_transaction_id( $paymentId );
 
