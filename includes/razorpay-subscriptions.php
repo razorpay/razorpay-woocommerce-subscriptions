@@ -283,16 +283,6 @@ class RZP_Subscriptions
 
         $recurringFee = $sub->get_total();
 
-        //
-        // Ad-Hoc code
-        //
-        if ($period === 'year')
-        {
-            $period = 'month';
-
-            $interval *= 12;
-        }
-
         $planArgs = array(
             'period'   => $this->getProductPeriod($period),
             'interval' => $interval
