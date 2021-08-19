@@ -251,11 +251,6 @@ function woocommerce_razorpay_subscriptions_init()
                 return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
             }
         }
-
-        public function subscription_cancelled_test($subscription)
-        {
-
-        }
     }
 
     /**
