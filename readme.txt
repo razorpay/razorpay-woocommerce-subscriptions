@@ -4,7 +4,7 @@ Tags: razorpay, payments, india, woocommerce, ecommerce, recurring, subscription
 Requires at least: 3.9.2
 Requires PHP: 5.6.0
 Tested up to: 5.8
-Stable tag: 2.2.1
+Stable tag: 2.2.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,9 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 2. Please make sure that you have Webhooks setup on the [Razorpay Plugin](https://wordpress.org/plugins/woo-razorpay/) to ensure that recurring payments are marked as paid on WooCommerce.
 
 == Changelog ==
+
+= 2.2.1
+* Bug fix: Cancellation of subscription from woo subscription
 
 = 2.2.1
 * Bug fix: Fixed the displaying of message in payment popup for yearly subscription
