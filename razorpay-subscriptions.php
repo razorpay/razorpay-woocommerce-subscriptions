@@ -4,8 +4,8 @@
 Plugin Name: Razorpay Subscriptions for WooCommerce
 Plugin URI: https://razorpay.com
 Description: Razorpay Subscriptions for WooCommerce
-Version: 2.2.1
-Stable tag: 2.2.1
+Version: 2.2.2
+Stable tag: 2.2.2
 Author: Razorpay
 Author URI: https://razorpay.com
 */
@@ -123,6 +123,7 @@ function woocommerce_razorpay_subscriptions_init()
         protected function setupExtraHooks()
         {
             add_action('woocommerce_subscription_status_cancelled', array(&$this, 'subscription_cancelled'));
+            add_action( 'woocommerce_subscription_status_pending-cancel',  array(&$this, 'subscription_cancelled'));
 
             // Hide Subscriptions Gateway for non-subscription payments
             add_filter('woocommerce_available_payment_gateways', array($this, 'disable_non_subscription'), 20);
@@ -219,24 +220,36 @@ function woocommerce_razorpay_subscriptions_init()
 
         public function subscription_cancelled($subscription)
         {
-            $this->subscriptions = new RZP_Subscriptions($this->getSetting('key_id'), $this->getSetting('key_secret'));
+            try {
+                $this->subscriptions = new RZP_Subscriptions($this->getSetting('key_id'), $this->getSetting('key_secret'));
 
-            $parentOrder = $subscription->get_parent();
+                $parentOrder = $subscription->get_parent();
 
-            if (empty($parentOrder) === true)
-            {
-                $log = array(
-                    'Error' =>  'Unable to cancel the order '. $parentOrder,
-                );
+                if (empty($parentOrder) === true)
+                {
+                    $log = array(
+                        'Error' => 'Unable to cancel the order ' . $parentOrder,
+                    );
 
-                error_log(json_encode($log));
+                    error_log(json_encode($log));
 
-                return ;
+                    return;
+                }
+
+                $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
+
+                //Canceling the subscription value
+                //0 (default): Cancel the subscription immediately.
+                //1: Cancel the subscription at the end of the current billing cycle.
+                $subscriptionCycleEndAt = ['cancel_at_cycle_end' => 0];
+                if($subscription->get_status() == "pending-cancel"){
+                    $subscriptionCycleEndAt['cancel_at_cycle_end'] = 1;
+                }
+
+                $this->subscriptions->cancelSubscription($subscriptionId,$subscriptionCycleEndAt);
+            }catch (Exception $e) {
+                return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
             }
-
-            $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
-
-            $this->subscriptions->cancelSubscription($subscriptionId);
         }
     }
 

@@ -80,11 +80,11 @@ class RZP_Subscriptions
      * @param $subscriptionId
      * @throws Errors\Error
      */
-    public function cancelSubscription($subscriptionId)
+    public function cancelSubscription($subscriptionId, $subscriptionCycleEndAt)
     {
         try
         {
-            $this->api->subscription->fetch($subscriptionId)->cancel($subscriptionId);
+            $this->api->subscription->fetch($subscriptionId)->cancel($subscriptionCycleEndAt);
         }
         catch (Exception $e)
         {
