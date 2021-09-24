@@ -131,14 +131,16 @@ function woocommerce_razorpay_subscriptions_init()
 
         public function disable_non_subscription($availableGateways)
         {
-            $enable = WC_Subscriptions_Cart::cart_contains_subscription();
-
-            if ($enable === false)
+            // If Woo-Subscription plugin not install/activate hide Subscriptions Gateway.
+            // Or If Woo-Subscription plugin is activate but cart does not contain subscription product hide Subscriptions Gateway.
+            if( ! class_exists( 'WC_Subscriptions_Cart' ) || ( class_exists( 'WC_Subscriptions_Cart' ) && ! WC_Subscriptions_Cart::cart_contains_subscription() ) )
             {
+
                 if (isset($availableGateways[$this->id]))
                 {
                     unset($availableGateways[$this->id]);
                 }
+               
             }
 
             return $availableGateways;
