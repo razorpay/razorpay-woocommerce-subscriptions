@@ -196,7 +196,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         //
         $wcSubscription = array_values($wcSubscription)[0];
 
-        if (count($wcSubscription) > 1)
+        if (count(array($wcSubscription)) > 1)
         {
             $log = array(
                 'Error' => 'There are more than one subscription products in this order'
@@ -214,7 +214,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             return;
         }
 
-        $paymentCount = $wcSubscription->get_completed_payment_count();
+        $paymentCount = $wcSubscription->get_payment_count();
 
         //For single period subscription we are not setting the upfront amount
         if (($subscription->total_count == 1) and ($paymentCount == 1) and ($subscription->paid_count == 0))
@@ -247,10 +247,10 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             {
 
                 $order_note = 'Subscription renewal payment due:';
-                
+
                 // Always put the subscription on hold in case something goes wrong while trying to process renewal
                 $wcSubscription->update_status( 'on-hold', $order_note );
-                
+
                 //
                 // If subscription has been paid for on razorpay's end, we need to mark the
                 // subscription payment to be successful on woocommerce's end
@@ -266,7 +266,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 {
                     $last_order = $this->create_renewal_order( $wcSubscription, $paymentId );
                 }
-                
+
                 if ($wcSubscription->needs_payment() === true)
                 {
                     $last_order->update_status( 'completed' );
@@ -303,7 +303,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         $wcSubscription = array_values($wcSubscription)[0];
 
 
-        $is_first_payment = ( $wcSubscription->get_completed_payment_count() < 1 );
+        $is_first_payment = ( $wcSubscription->get_payment_count() < 1 );
 
         if (!$is_first_payment)
         {
@@ -470,8 +470,8 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         {
             $new_payment_date = 0;
 
-        } 
-        else 
+        }
+        else
         {
             $new_payment_timestamp = $subscription->current_end;
 
@@ -486,8 +486,8 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
             error_log("Next payment date updated successfully");
 
-        } 
-        catch ( Exception $e ) 
+        }
+        catch ( Exception $e )
         {
             error_log('invalid-date', $e->getMessage());
         }
