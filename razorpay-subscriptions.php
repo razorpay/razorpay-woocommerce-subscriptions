@@ -124,6 +124,8 @@ function woocommerce_razorpay_subscriptions_init()
         {
             add_action('woocommerce_subscription_status_cancelled', array(&$this, 'subscription_cancelled'));
             add_action( 'woocommerce_subscription_status_pending-cancel',  array(&$this, 'subscription_cancelled'));
+            add_action( 'woocommerce_subscription_status_on-hold',  array(&$this, 'subscription_on_hold'));
+            add_action( 'woocommerce_subscription_status_on-hold_to_active',  array(&$this, 'subscription_reactivate'));
 
             // Hide Subscriptions Gateway for non-subscription payments
             add_filter('woocommerce_available_payment_gateways', array($this, 'disable_non_subscription'), 20);
@@ -247,6 +249,60 @@ function woocommerce_razorpay_subscriptions_init()
                 }
 
                 $this->subscriptions->cancelSubscription($subscriptionId,$subscriptionCycleEndAt);
+            }catch (Exception $e) {
+                return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
+            }
+        }
+
+        function subscription_on_hold($subscription){
+            try {
+                $this->subscriptions = new RZP_Subscriptions($this->getSetting('key_id'), $this->getSetting('key_secret'));
+
+                $parentOrder = $subscription->get_parent();
+
+                if (empty($parentOrder) === true)
+                {
+                    $log = array(
+                        'Error' => 'Unable to pause the order ' . $parentOrder,
+                    );
+
+                    error_log(json_encode($log));
+
+                    return;
+                }
+
+                $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
+
+                $subscriptionPauseAt = ['pause_at' => 'now'];
+
+                $this->subscriptions->pauseSubscription($subscriptionId,$subscriptionPauseAt);
+            }catch (Exception $e) {
+                return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
+            }
+        }
+
+        function  subscription_reactivate($subscription){
+            try {
+                $this->subscriptions = new RZP_Subscriptions($this->getSetting('key_id'), $this->getSetting('key_secret'));
+
+                $parentOrder = $subscription->get_parent();
+
+                if (empty($parentOrder) === true)
+                {
+                    $log = array(
+                        'Error' => 'Unable to reactivate the order ' . $parentOrder,
+                    );
+
+                    error_log(json_encode($log));
+
+                    return;
+                }
+
+                $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
+
+                $subscriptionResumeAt = ['resume_at' => 'now'];
+
+                $this->subscriptions->resumeSubscription($subscriptionId,$subscriptionResumeAt);
             }catch (Exception $e) {
                 return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
             }

@@ -389,8 +389,8 @@ class RZP_Subscriptions
         if ($count > 1)
         {
             throw new Exception('Currently Razorpay does not support more than'
-                                . ' one product in the cart if one of the products'
-                                . ' is a subscription.');
+                . ' one product in the cart if one of the products'
+                . ' is a subscription.');
         }
 
         return array_values($products)[0];
@@ -405,4 +405,136 @@ class RZP_Subscriptions
         return self::RAZORPAY_SUBSCRIPTION_ID . $orderId;
     }
 
+    /**
+     * Method to pause subscription of client.
+     *
+     * @param $subscriptionId
+     * @throws Errors\Error
+     */
+    public function pauseSubscription($subscriptionId, $subscriptionPauseAt)
+    {
+        try
+        {
+            $this->api->subscription->fetch($subscriptionId)->pause($subscriptionPauseAt);
+        }
+        catch (Exception $e)
+        {
+            $message = $e->getMessage();
+
+            throw new Errors\Error(
+                $message,
+                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_CANCELLATION_FAILED,
+                400
+            );
+        }
+    }
+
+    /**
+     * Method to resume subscription of client.
+     *
+     * @param $subscriptionId
+     * @throws Errors\Error
+     */
+    public function resumeSubscription($subscriptionId, $subscriptionResumeAt)
+    {
+        try
+        {
+            $this->api->subscription->fetch($subscriptionId)->resume($subscriptionResumeAt);
+        }
+        catch (Exception $e)
+        {
+            $message = $e->getMessage();
+
+            throw new Errors\Error(
+                $message,
+                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_CANCELLATION_FAILED,
+                400
+            );
+        }
+    }
+
+    public function addSubscriptionMetaBox() {
+
+        add_meta_box(
+            'rzp_subscription_link',
+            esc_html__( 'Razorpay Subscription Link', 'text-domain' ),
+            array($this, 'renderSubscriptionLinkMetaBox'),
+            'shop_subscription',
+            'side',
+            'default'
+        );
+
+        add_meta_box(
+            'rzp_subscription_invoices',
+            esc_html__( 'Razorpay Subscription Invoices', 'text-domain' ),
+            array($this, 'renderSubscriptionInvoice'),
+            'shop_subscription',
+            'normal',
+            'default'
+        );
+
+    }
+
+    public function renderSubscriptionLinkMetaBox(){
+        global $post, $the_subscription;
+        $orderId= $post->ID;
+
+        $parentOrder = $the_subscription->get_parent();
+        if (!empty($parentOrder))
+        {
+            $subscriptionId = get_post_meta($parentOrder->get_id(), 'razorpay_subscription_id')[0];
+
+            $res = $this->api->subscription->fetch($subscriptionId);
+
+            echo '<p><strong>'. esc_html__( 'Link: ', 'woocommerce-subscriptions' ) .'</strong>'. $res['short_url'] .'</p>';
+        }
+
+    }
+
+    public function renderSubscriptionInvoice(){
+        global $post, $the_subscription;
+        $orderId= $post->ID;
+
+        $parentOrder = $the_subscription->get_parent();
+        if (!empty($parentOrder))
+        {
+            $subscriptionId = get_post_meta($parentOrder->get_id(), 'razorpay_subscription_id')[0];
+
+            $subscription_invoices = $this->api->invoice->all(array('subscription_id'=>$subscriptionId));
+
+            echo '<div class="woocommerce_subscriptions_related_orders">
+            <table>
+                <thead>
+                <tr>
+                    <th>Invoice Id</th>
+                    <th>Invoice Status</th>
+                    <th>Bill Date</th>
+                    <th>Total</th>
+                </tr>
+                </thead>
+                <tbody>';
+
+            foreach ($subscription_invoices['items'] as $invoice){
+                echo '<tr>
+                            <td>'. $invoice['id'] .'</td>
+                            <td>'. ucwords($invoice['status']) .'</td>
+                            <td>'. date("F d, Y", $invoice['paid_at']) .'</td>
+                            <td><span>'. $invoice['currency_symbol'].'</span>'.(int)($invoice['amount_paid'] /100) .'</td>
+                        </tr>';
+
+            }
+            echo '</tbody>
+            </table>
+            </div>';
+        }
+
+    }
+
+}
+
+add_action( 'add_meta_boxes',  'subscriptionMetaBox');
+
+function subscriptionMetaBox(){
+    $rzp = new RZP_Subscriptions(get_option('key_id_field'), get_option('key_secret_field'));
+    $rzp->addSubscriptionMetaBox();
 }
