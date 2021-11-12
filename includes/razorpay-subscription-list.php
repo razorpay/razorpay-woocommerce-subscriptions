@@ -23,13 +23,51 @@ class RZP_Subscription_List extends WP_List_Table {
             <div class="wrap">';
 
         $this->subscription_header();
-        $this->prepare_items();
+
+        $this->prepare_subscription_items();
 
         $this->views();
 
-        echo '<form method="post">
+        echo '<form method="get">
             <input type="hidden" name="page" value="razorpay_subscriptions">';
 
+        ?>
+        <p class="search-box">
+            <label class="" for="search_id-search-input">Status </label>
+            <select name="status" id="search_id-search-input">
+                <option value=""></option>
+                <option value="created" <?php if (isset($_GET['status']) && $_GET['status'] == "created") { ?> selected <?php } ?> >
+                    Created
+                </option>
+                <option value="authenticated" <?php if (isset($_GET['status']) && $_GET['status'] == "authenticated") { ?> selected <?php } ?> >
+                    Authenticated
+                </option>
+                <option value="active" <?php if (isset($_GET['status']) && $_GET['status'] == "active") { ?> selected <?php } ?>>
+                    Active
+                </option>
+                <option value="pending" <?php if (isset($_GET['status']) && $_GET['status'] == "pending") { ?> selected <?php } ?> >
+                    Pending
+                </option>
+                <option value="paused" <?php if (isset($_GET['status']) && $_GET['status'] == "paused") { ?> selected <?php } ?> >
+                    Paused
+                </option>
+                <option value="halted" <?php if (isset($_GET['status']) && $_GET['status'] == "halted") { ?> selected <?php } ?> >
+                    Halted
+                </option>
+                <option value="cancelled" <?php if (isset($_GET['status']) && $_GET['status'] == "cancelled") { ?> selected <?php } ?> >
+                    Cancelled
+                </option>
+                <option value="completed" <?php if (isset($_GET['status']) && $_GET['status'] == "completed") { ?> selected <?php } ?> >
+                    Completed
+                </option>
+                <option value="expired" <?php if (isset($_GET['status']) && $_GET['status'] == "expired") { ?> selected <?php } ?> >
+                    Expired
+                </option>
+            </select>
+            <input type="submit" id="search-submit" class="button" value="search">
+            <a href="<?php echo admin_url('admin.php?page=razorpay_subscriptions'); ?>">Clear</a></p>
+
+        <?php
         $this->display();
 
         echo '</form></div>
@@ -80,7 +118,7 @@ class RZP_Subscription_List extends WP_List_Table {
     /**
      * Prepare admin view
      */
-    function prepare_items()
+    function prepare_subscription_items()
     {
 
         $per_page = 10;
@@ -95,13 +133,23 @@ class RZP_Subscription_List extends WP_List_Table {
             $offset = 0;
         }
 
-        $subscription_pages = $this->get_items();
+        $status = isset($_REQUEST['status']) ? sanitize_text_field($_REQUEST['status']) : '';
+
+        $subscription_page = $this->get_subscription_items($status);
 
         $columns = $this->get_columns();
         $hidden = array();
         $this->_column_headers = array($columns, $hidden);
 
-        $count = count($subscription_pages);
+        $count = count($subscription_page);
+
+        $subscription_pages = array();
+        for ($i = 0; $i < $count; $i++) {
+            if ($i >= $offset && $i < $offset + $per_page) {
+                $subscription_pages[] = $subscription_page[$i];
+            }
+        }
+
         $this->items = $subscription_pages;
 
         // Set the pagination
@@ -112,7 +160,7 @@ class RZP_Subscription_List extends WP_List_Table {
         ) );
     }
 
-    function get_items()
+    function get_subscription_items($status)
     {
         $items = array();
 
@@ -122,7 +170,7 @@ class RZP_Subscription_List extends WP_List_Table {
 
         try
         {
-            $subscriptions = $api->subscription->all();
+            $subscriptions = $api->subscription->all(['status'=>$status, 'count'=>100]);
         }
         catch (Exception $e)
         {
@@ -191,7 +239,14 @@ class RZP_Subscription_List extends WP_List_Table {
         $this->_column_headers = array($columns, $hidden);
 
         $count = count($plans_page);
-        $this->items = $plans_page;
+
+        $plans_pages = array();
+        for ($i = 0; $i < $count; $i++) {
+            if ($i >= $offset && $i < $offset + $per_page) {
+                $plans_pages[] = $plans_page[$i];
+            }
+        }
+        $this->items = $plans_pages;
 
         // Set the pagination
         $this->set_pagination_args( array(
@@ -211,7 +266,7 @@ class RZP_Subscription_List extends WP_List_Table {
 
         try
         {
-            $plans = $api->plan->all();
+            $plans = $api->plan->all(['count'=>100]);
         }
         catch (Exception $e)
         {
