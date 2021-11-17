@@ -29,7 +29,6 @@ require_once $pluginRoot . '/razorpay-sdk/Razorpay.php';
 require_once __DIR__ . '/includes/razorpay-subscription-webhook.php';
 require_once __DIR__ . '/includes/Errors/SubscriptionErrorCode.php';
 require_once __DIR__ . '/includes/razorpay-subscriptions.php';
-require_once __DIR__ . '/includes/razorpay-subscription-list.php';
 
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors;
@@ -37,6 +36,19 @@ use Razorpay\Api\Errors;
 // Load this after the woo-razorpay plugin
 add_action('plugins_loaded', 'woocommerce_razorpay_subscriptions_init', 20);
 add_action('admin_post_nopriv_rzp_wc_webhook', 'razorpay_webhook_subscription_init', 20);
+add_action('setup_extra_setting_fields', 'add_subscription_webhook_events');
+
+function add_subscription_webhook_events( &$args ) {
+
+    $subsFields = array(
+        RZP_Webhook::SUBSCRIPTION_CANCELLED        => 'subscription.cancelled',
+        RZP_Webhook::SUBSCRIPTION_PAUSED           => 'subscription.paused',
+        RZP_Webhook::SUBSCRIPTION_RESUMED          => 'subscription.resumed',
+    );
+
+    $args['webhook_events']['options'] = array_merge($args['webhook_events']['options'], $subsFields);
+
+}
 
 function woocommerce_razorpay_subscriptions_init()
 {
