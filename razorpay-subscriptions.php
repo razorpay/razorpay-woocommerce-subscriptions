@@ -29,6 +29,7 @@ require_once $pluginRoot . '/razorpay-sdk/Razorpay.php';
 require_once __DIR__ . '/includes/razorpay-subscription-webhook.php';
 require_once __DIR__ . '/includes/Errors/SubscriptionErrorCode.php';
 require_once __DIR__ . '/includes/razorpay-subscriptions.php';
+require_once __DIR__ . '/includes/razorpay-subscription-list.php';
 
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors;

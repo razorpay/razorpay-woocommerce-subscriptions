@@ -1,0 +1,27 @@
+.subscription-header {
+    line-height: 50px;
+    border: 1px solid #e2e8ea;
+    position: relative;
+    background-color: #e2e8ea;
+    padding: 0 12px 0 24px;
+    margin-bottom: 20px;
+}
+.subscription-header a {
+    color: #555;
+    border-bottom: 3px solid transparent;
+    display: inline-block;
+    margin: 0 16px;
+    font-weight: bold;
+    position: relative;
+    bottom: -1px;
+    text-decoration: none;
+}
+.subscription-header a:hover { text-decoration: none; }
+
+.subscription-header > a:first-child {
+    margin-left: 0;
+}
+.subscription-header a.active {
+    color: #528ff0;
+    border-color: #528ff0;
+}

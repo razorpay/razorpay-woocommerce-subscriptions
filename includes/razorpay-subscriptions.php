@@ -4,6 +4,10 @@ use Razorpay\Api\Api;
 use Razorpay\Api\Errors;
 use Razorpay\Woocommerce\Errors as WooErrors;
 
+add_action( 'add_meta_boxes',  'subscriptionMetaBox');
+add_action('admin_menu', 'pluginMenu');
+add_action('admin_enqueue_scripts', 'enqueue_subscription_scripts', 0);
+
 class RZP_Subscriptions
 {
     /**
@@ -389,8 +393,8 @@ class RZP_Subscriptions
         if ($count > 1)
         {
             throw new Exception('Currently Razorpay does not support more than'
-                                . ' one product in the cart if one of the products'
-                                . ' is a subscription.');
+                . ' one product in the cart if one of the products'
+                . ' is a subscription.');
         }
 
         return array_values($products)[0];
@@ -404,5 +408,140 @@ class RZP_Subscriptions
     {
         return self::RAZORPAY_SUBSCRIPTION_ID . $orderId;
     }
+
+    public function addSubscriptionMetaBox() {
+
+        add_meta_box(
+            'rzp_subscription_link',
+            esc_html__( 'Razorpay Subscription Link', 'text-domain' ),
+            array($this, 'renderSubscriptionLinkMetaBox'),
+            'shop_subscription',
+            'side',
+            'default'
+        );
+
+        add_meta_box(
+            'rzp_subscription_invoices',
+            esc_html__( 'Razorpay Subscription Invoices', 'text-domain' ),
+            array($this, 'renderSubscriptionInvoice'),
+            'shop_subscription',
+            'normal',
+            'default'
+        );
+
+    }
+
+    public function renderSubscriptionLinkMetaBox(){
+        global $post, $the_subscription;
+        $orderId= $post->ID;
+
+        $parentOrder = $the_subscription->get_parent();
+        if (!empty($parentOrder))
+        {
+            $subscriptionId = get_post_meta($parentOrder->get_id(), 'razorpay_subscription_id')[0];
+
+            $res = $this->api->subscription->fetch($subscriptionId);
+
+            echo '<p><strong>'. esc_html__( 'Link: ', 'woocommerce-subscriptions' ) .'</strong>'. $res['short_url'] .'</p>';
+        }
+
+    }
+
+    public function renderSubscriptionInvoice(){
+        global $post, $the_subscription;
+        $orderId= $post->ID;
+
+        $parentOrder = $the_subscription->get_parent();
+        if (!empty($parentOrder))
+        {
+            $subscriptionId = get_post_meta($parentOrder->get_id(), 'razorpay_subscription_id')[0];
+
+            $subscription_invoices = $this->api->invoice->all(array('subscription_id'=>$subscriptionId));
+
+            echo '<div class="woocommerce_subscriptions_related_orders">
+            <table>
+                <thead>
+                <tr>
+                    <th>Invoice Id</th>
+                    <th>Invoice Status</th>
+                    <th>Bill Date</th>
+                    <th>Total</th>
+                </tr>
+                </thead>
+                <tbody>';
+
+            foreach ($subscription_invoices['items'] as $invoice){
+                echo '<tr>
+                            <td>'. $invoice['id'] .'</td>
+                            <td>'. ucwords($invoice['status']) .'</td>
+                            <td>'. date("F d, Y", $invoice['paid_at']) .'</td>
+                            <td><span>'. $invoice['currency_symbol'].'</span>'.(int)($invoice['amount_paid'] /100) .'</td>
+                        </tr>';
+
+            }
+            echo '</tbody>
+            </table>
+            </div>';
+        }
+
+    }
+
+    public function addPluginPage() {
+        /* add pages & menu items */
+        add_menu_page( esc_attr__( 'Razorpay Subscriptions', 'textdomain' ), esc_html__( 'Razorpay Subscriptions', 'textdomain' ),
+            'administrator','razorpay_subscriptions', array($this,'rzp_subscriptions_page') , '', 10);
+
+        add_submenu_page( esc_attr__( '', 'textdomain' ), esc_html__( 'Razorpay Subscriptions', 'textdomain' ),
+            'Razorpay Subscriptions', 'administrator','razorpay_subscription_plans', array( $this, 'rzp_subscription_plans' ));
+        add_submenu_page( esc_attr__( '', 'textdomain' ), esc_html__( 'Razorpay Subscriptions', 'textdomain' ),
+            'Razorpay Subscriptions', 'administrator','razorpay_subscription_addons', array( $this, 'rzp_subscription_addons' ));
+    }
+
+    /**
+     * Razorpay subscription list Page
+     */
+    public function rzp_subscriptions_page()
+    {
+        $subscription_list = new RZP_Subscription_List();
+
+        $subscription_list->razorpay_subscriptions();
+    }
+
+    /**
+     * Razorpay subscription plans list Page
+     */
+    public function rzp_subscription_plans()
+    {
+        $subscription_list = new RZP_Subscription_List();
+
+        $subscription_list->razorpay_subscription_plans();
+    }
+    /**
+     * Razorpay subscription addons list Page
+     */
+    public function rzp_subscription_addons()
+    {
+        $subscription_list = new RZP_Subscription_List();
+
+        $subscription_list->razorpay_subscription_addons();
+    }
+
+}
+
+function subscriptionMetaBox(){
+    $rzp = new RZP_Subscriptions(get_option('key_id_field'), get_option('key_secret_field'));
+    $rzp->addSubscriptionMetaBox();
+}
+
+function pluginMenu(){
+    $rzp = new RZP_Subscriptions(get_option('key_id_field'), get_option('key_secret_field'));
+    $rzp->addPluginPage();
+}
+
+function enqueue_subscription_scripts()
+{
+    wp_register_style('razorpay_subscriptions-css', plugin_dir_url(dirname(__FILE__))  . 'css/razorpay_subscriptions.css',
+        null, null);
+    wp_enqueue_style('razorpay_subscriptions-css');
 
 }
