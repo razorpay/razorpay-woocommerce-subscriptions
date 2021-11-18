@@ -247,8 +247,10 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             {
 
                 $order_note = 'Subscription renewal payment due:';
+
                 // Always put the subscription on hold in case something goes wrong while trying to process renewal
                 $wcSubscription->update_status( 'on-hold', $order_note );
+
                 //
                 // If subscription has been paid for on razorpay's end, we need to mark the
                 // subscription payment to be successful on woocommerce's end
@@ -264,6 +266,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 {
                     $last_order = $this->create_renewal_order( $wcSubscription, $paymentId );
                 }
+
                 if ($wcSubscription->needs_payment() === true)
                 {
                     $last_order->update_status( 'completed' );
@@ -298,6 +301,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         }
 
         $wcSubscription = array_values($wcSubscription)[0];
+
 
         $is_first_payment = ( $wcSubscription->get_payment_count() < 1 );
 
@@ -389,11 +393,11 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         if (empty($wcSubscription) === true)
         {
-             $log = array(
+            $log = array(
                 'Error' =>  'woocommerce Subscription Not Found  woocommerce Order Id -'. $orderId,
-             );
+            );
 
-             error_log(json_encode($log));
+            error_log(json_encode($log));
 
             return null;
         }
@@ -536,7 +540,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         $this->pauseSubscriptionSuccess($orderId);
 
-        exit;
+        return;
     }
 
     /**
@@ -611,7 +615,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         $this->resumeSubscriptionSuccess($orderId);
 
-        exit;
+        return;
     }
 
     /**
@@ -638,5 +642,4 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         }
 
     }
-
 }
