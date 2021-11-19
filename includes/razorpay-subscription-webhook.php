@@ -393,11 +393,11 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         if (empty($wcSubscription) === true)
         {
-             $log = array(
+            $log = array(
                 'Error' =>  'woocommerce Subscription Not Found  woocommerce Order Id -'. $orderId,
-             );
+            );
 
-             error_log(json_encode($log));
+            error_log(json_encode($log));
 
             return null;
         }
@@ -491,5 +491,155 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         {
             error_log('invalid-date', $e->getMessage());
         }
+    }
+
+    /**
+     * Method for subscription pause webhook
+     *
+     * @param array $data
+     * @return string|void
+     */
+    protected function subscriptionPaused(array $data)
+    {
+        //
+        // Order entity should be sent as part of the webhook payload
+        //
+
+        $subscriptionId = $data['payload']['subscription']['entity']['id'];
+
+        // Process subscription pause this way
+        if (empty($subscriptionId) === false)
+        {
+            return $this->pauseSubscription($subscriptionId);
+        }
+
+    }
+
+    /**
+     * Make request to pause subscription
+     *
+     * @param $subscriptionId
+     * @return string
+     */
+    protected function pauseSubscription($subscriptionId)
+    {
+        $subscription = null;
+
+        try
+        {
+            $subscription = $this->api->subscription->fetch($subscriptionId);
+        }
+        catch (Exception $e)
+        {
+            $message = $e->getMessage();
+
+            return "RAZORPAY ERROR: Subscription fetch failed with the message $message";
+        }
+
+        $orderId = $subscription->notes[WC_Razorpay::WC_ORDER_ID];
+
+        $this->pauseSubscriptionSuccess($orderId);
+
+        return;
+    }
+
+    /**
+     * Change order status from active to on-hold when subscription pause event called.
+     *
+     * @param $orderId
+     */
+    protected function pauseSubscriptionSuccess($orderId)
+    {
+        $wcSubscription = $this->get_woocoommerce_subscriptions_for_order($orderId);
+
+        if ($wcSubscription === null)
+        {
+            return;
+        }
+
+        $wcSubscription = array_values($wcSubscription)[0];
+
+        if ( $wcSubscription->has_status( 'active' ))
+        {
+            $wcSubscription->update_status( 'on-hold' );
+
+            error_log("Subscription paused successfully");
+        }
+
+    }
+
+    /**
+     * Method for subscription resume webhook
+     *
+     * @param array $data
+     * @return string|void
+     */
+    protected function subscriptionResumed(array $data)
+    {
+        //
+        // Order entity should be sent as part of the webhook payload
+        //
+
+        $subscriptionId = $data['payload']['subscription']['entity']['id'];
+
+        // Process subscription resume this way
+        if (empty($subscriptionId) === false)
+        {
+            return $this->resumeSubscription($subscriptionId);
+        }
+
+    }
+
+    /**
+     * Make request to resume subscription
+     *
+     * @param $subscriptionId
+     * @return string
+     */
+    protected function resumeSubscription($subscriptionId)
+    {
+        $subscription = null;
+
+        try
+        {
+            $subscription = $this->api->subscription->fetch($subscriptionId);
+        }
+        catch (Exception $e)
+        {
+            $message = $e->getMessage();
+
+            return "RAZORPAY ERROR: Subscription fetch failed with the message $message";
+        }
+
+        $orderId = $subscription->notes[WC_Razorpay::WC_ORDER_ID];
+
+        $this->resumeSubscriptionSuccess($orderId);
+
+        return;
+    }
+
+    /**
+     * Change order status from on-hold to active when subscription resumed event called.
+     *
+     * @param $orderId
+     */
+    protected function resumeSubscriptionSuccess($orderId)
+    {
+        $wcSubscription = $this->get_woocoommerce_subscriptions_for_order($orderId);
+
+        if ($wcSubscription === null)
+        {
+            return;
+        }
+
+        $wcSubscription = array_values($wcSubscription)[0];
+
+        if ( $wcSubscription->has_status( 'on-hold' ))
+        {
+            $wcSubscription->update_status( 'active' );
+
+            error_log("Subscription reactivated successfully");
+        }
+
     }
 }

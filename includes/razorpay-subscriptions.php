@@ -35,7 +35,6 @@ class RZP_Subscriptions
         $this->api = new Api($keyId, $keySecret);
 
         $this->razorpay = new WC_Razorpay(false);
-
     }
 
     /**
@@ -389,8 +388,8 @@ class RZP_Subscriptions
         if ($count > 1)
         {
             throw new Exception('Currently Razorpay does not support more than'
-                                . ' one product in the cart if one of the products'
-                                . ' is a subscription.');
+                . ' one product in the cart if one of the products'
+                . ' is a subscription.');
         }
 
         return array_values($products)[0];
@@ -403,6 +402,54 @@ class RZP_Subscriptions
     protected function getSubscriptionSessionKey($orderId)
     {
         return self::RAZORPAY_SUBSCRIPTION_ID . $orderId;
+    }
+
+    /**
+     * Method to pause subscription of client.
+     *
+     * @param $subscriptionId
+     * @throws Errors\Error
+     */
+    public function pauseSubscription($subscriptionId, $subscriptionPauseAt)
+    {
+        try
+        {
+            $this->api->subscription->fetch($subscriptionId)->pause($subscriptionPauseAt);
+        }
+        catch (Exception $e)
+        {
+            $message = $e->getMessage();
+
+            throw new Errors\Error(
+                $message,
+                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_PAUSE_FAILED,
+                400
+            );
+        }
+    }
+
+    /**
+     * Method to resume subscription of client.
+     *
+     * @param $subscriptionId
+     * @throws Errors\Error
+     */
+    public function resumeSubscription($subscriptionId, $subscriptionResumeAt)
+    {
+        try
+        {
+            $this->api->subscription->fetch($subscriptionId)->resume($subscriptionResumeAt);
+        }
+        catch (Exception $e)
+        {
+            $message = $e->getMessage();
+
+            throw new Errors\Error(
+                $message,
+                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_RESUME_FAILED,
+                400
+            );
+        }
     }
 
 }
