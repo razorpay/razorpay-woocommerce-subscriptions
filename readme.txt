@@ -138,5 +138,4 @@ Visit [razorpay.com/support](https://razorpay.com/support/) for support requests
 
 == License ==
 
-The Razorpay WooCommerce Subscriptions plugin is released under the GPLv2 license, same as that
-of WordPress. See the LICENSE file for the complete LICENSE text.
+The Razorpay WooCommerce Subscriptions plugin is released under the GPLv2 license, same as that of WordPress. See the LICENSE file for the complete LICENSE text.
