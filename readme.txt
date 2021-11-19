@@ -3,8 +3,8 @@ Contributors: razorpay
 Tags: razorpay, payments, india, woocommerce, ecommerce, recurring, subscriptions
 Requires at least: 3.9.2
 Requires PHP: 5.6.0
-Tested up to: 5.8
-Stable tag: 2.2.2
+Tested up to: 5.8.2
+Stable tag: 2.3.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,9 +12,14 @@ Allows you to use Razorpay payment gateway with the WooCommerce Subscriptions pl
 
 == Description ==
 
-This is the official Razorpay Subscriptions payment gateway plugin for WooCommerce. Allows you to accept recurring payments on WooCommerce Subscriptions using the Razorpay Subscriptions API.
+This is the official Razorpay Subscriptions payment gateway plugin for WooCommerce. Allows you automatically charge customers on a recurring basis, based on a billing cycle that you control. You can easily create and manage Subscriptions and get instant alerts on payment activity as well as the status of Subscriptions.
 
-This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has been tested upto the 5.4.1 WooCommerce release. This also requires the WooCommerce Subscriptions plugin to be installed on your server. (Tested upto 3.0.9 version of the WooCommerce Subscriptions release).
+Razorpay Subscription Plugin helps you to start accepting recurring payments on your WordPress website:
+- Very quick and merchant friendly integration
+- Via Credit Card, Debit Card, Net Banking and UPI payment methods
+- No set-up costs are involved. It’s a free plugin
+
+This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has been tested upto the 5.9.0 WooCommerce release. This also requires the WooCommerce Subscriptions plugin to be installed on your server. (Tested upto 3.1.6 version of the WooCommerce Subscriptions release).
 
 == Installation ==
 
@@ -27,7 +32,7 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 1. Wordpress v3.9.2 and later
 2. WooCommerce v2.4 and later
 3. WooCommerce Subscriptions v2.2 and later
-4. [Razorpay WooCommerce Plugin](https://wordpress.org/plugins/woo-razorpay/) 2.0.0 and later
+4. [Razorpay WooCommerce Plugin](https://wordpress.org/plugins/woo-razorpay/) 2.8.2 and later
 5. PHP v5.6.0 and later
 6. php-curl
 
@@ -40,18 +45,74 @@ This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has 
 
 == Frequently Asked Questions ==
 
-1. We currently do not support lifetime subscriptions as of now. The maximum time that a subscription is allowed to run without requiring an authentication again from the customer is 10 years.
-2. Please make sure that you have Webhooks setup on the [Razorpay Plugin](https://wordpress.org/plugins/woo-razorpay/) to ensure that recurring payments are marked as paid on WooCommerce.
+= What is Razorpay? =
+
+Razorpay is a full-stack payments solution that enables thousands of online and offline businesses to accept, process and disburse payments on the web and mobile apps.
+
+= What’s a WordPress Plugin? =
+
+A WordPress plugin is a piece of code that you may use to enhance the features and functionality of your current WordPress site.
+
+= What is Subscription? =
+
+Subscriptions does not require any intervention from the customer. It is an automated payment collection system that requires a one-time approval from the customer via an authentication transaction.
+Merchants can automatically charge customers based on a billing cycle that they  control.
+
+= What does the Razorpay Subscription plugin for WordPress do? =
+
+It helps you add recurring payments to your WordPress website or blog with a simple integration.
+
+= Do I need a Razorpay account for using plugins? =
+
+Yes, you will have to sign-up for a Razorpay account. Here’s a quick guide for you.
+
+= Can I accept UPI and credit card payments on my WordPress website? =
+
+Yes, with Razorpay Subscription Plugin you can accept payments via multiple payment methods such as  UPI, Credit/Debit cards and Net-banking.
+
+= Can I accept international payments? =
+
+Yes, you can accept international payments with Razorpay Subscriptions. Here’s a quick guide for you.
+
+= How do I enable Multi-currency support =
+
+Please get multi-currency enabled for your account. Once you have it enabled, you can install any plugin version higher than 2.0.0, which comes with native multi-currency support.
+
+= Is it safe to collect payments from Razorpay? =
+
+Safe money movement with our 100% secure ecosystem guarded with PCI DSS compliance.
+
+= Where can I find a report and analysis of all transactions? =
+
+You can download all of your transactions with the details of your customers from your Razorpay dashboard.
+
+= What is the platform fee for using Razorpay to accept payments? =
+
+We offer a simple, transparent pricing of 2% fee per transaction amount. However, if you’d like a customised plan for your business, you can read more here.
+
+= Does this support webhooks? =
+
+Please make sure that you have Webhooks setup on the [Razorpay Plugin](https://wordpress.org/plugins/woo-razorpay/) to ensure that recurring payments are marked as paid on WooCommerce.
+
+= Is there a limit on how many years a Subscription can remain active or a limit on maximum number of billing cycles for a subscription? =
+
+We support Subscriptions for a maximum duration of 100 years.
+The number of billing cycles depends if the subscription is billed daily, weekly, monthly or yearly.
 
 == Changelog ==
 
-= 2.2.1
+= 2.3.0 =
+* Added new features of subscription like pause and resume the subscription.
+* Added subscription webhook events(pause, resume & cancel) and integrated.
+* Tested upto WordPress 5.8.2 and WooCommerce 5.9.0 and WooCommerce subscription 3.1.6
+
+= 2.2.2 =
 * Bug fix: Cancellation of subscription from woo subscription
 
-= 2.2.1
+= 2.2.1 =
 * Bug fix: Fixed the displaying of message in payment popup for yearly subscription
 
-= 2.2.0
+= 2.2.0 =
 * Tested upto WordPress 5.7.2 and WooCommerce 5.4.1 and WooCommerce subscription 3.0.9
 
 = 2.1.0 =
