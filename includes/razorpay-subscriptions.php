@@ -309,7 +309,7 @@ class RZP_Subscriptions
             $planArgs['interval']
         ]);
 
-        return self::RAZORPAY_PLAN_ID . sha1($hashInput);
+        return self::RAZORPAY_PLAN_ID . sha1($hashInput); // nosemgrep : php.lang.security.weak-crypto.weak-crypto
     }
 
     // TODO: Take care of trial period here
