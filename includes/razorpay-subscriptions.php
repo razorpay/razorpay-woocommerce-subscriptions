@@ -32,9 +32,10 @@ class RZP_Subscriptions
 
     public function __construct($keyId, $keySecret)
     {
-        $this->api = new Api($keyId, $keySecret);
-
         $this->razorpay = new WC_Razorpay(false);
+        
+        $this->api = $this->razorpay->getRazorpayApiInstance();
+
     }
 
     /**
