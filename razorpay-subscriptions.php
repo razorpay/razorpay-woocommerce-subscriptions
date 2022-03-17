@@ -21,7 +21,12 @@ $pluginRoot = WP_PLUGIN_DIR . '/' . RAZORPAY_WOOCOMMERCE_PLUGIN;
 
 if ( ! is_dir( $pluginRoot ) )
 {
-    return;
+    define('RAZORPAY_WOOCOMMERCE_PLUGIN_FROM_GIT', 'razorpay-woocommerce');
+    $pluginRoot = WP_PLUGIN_DIR . '/' . RAZORPAY_WOOCOMMERCE_PLUGIN_FROM_GIT;
+
+    if(! is_dir( $pluginRoot )){
+        return;
+    }
 }
 
 require_once $pluginRoot . '/woo-razorpay.php';
