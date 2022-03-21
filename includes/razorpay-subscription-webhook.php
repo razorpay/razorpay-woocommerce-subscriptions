@@ -48,7 +48,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             if (empty($subscriptionId) === false)
             {
                 $orderId = $data['payload']['payment']['entity']['notes']['woocommerce_order_id'];
-                $this->subscriptionInfoLog("Woocommerce orderId: $orderId payment authorized webhook initiated");
+                subscriptionInfoLog("Woocommerce orderId: $orderId payment authorized webhook initiated");
 
                 return $this->processSubscription($paymentId, $subscriptionId);
             }
@@ -98,7 +98,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         if (empty($subscriptionId) === false)
         {
             $orderId = $data['payload']['subscription']['entity']['notes']['woocommerce_order_id'];
-            $this->subscriptionInfoLog("Woocommerce orderId: $orderId subscription cancel webhook initiated");
+            subscriptionInfoLog("Woocommerce orderId: $orderId subscription cancel webhook initiated");
 
             return $this->cancelSubscription($subscriptionId);
         }
@@ -155,7 +155,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         {
             $message = $e->getMessage();
 
-            $this->subscriptionErrorLog("Subscription fetch failed with the message $message");
+            subscriptionErrorLog("Subscription fetch failed with the message $message");
             return "RAZORPAY ERROR: Subscription fetch failed with the message $message";
         }
 
@@ -237,7 +237,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 $wcSubscription->payment_complete($paymentId);
 
                 error_log("Subscription Charged successfully");
-                $this->subscriptionInfoLog("Woocommerce orderId: $orderId Subscription charged for first payment");
+                subscriptionInfoLog("Woocommerce orderId: $orderId Subscription charged for first payment");
             }
 
             return;
@@ -273,7 +273,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 else
                 {
                     $last_order = $this->create_renewal_order( $wcSubscription, $paymentId );
-                    $this->subscriptionInfoLog("Woocommerce orderId: $orderId Subscription renewal order created");
+                    subscriptionInfoLog("Woocommerce orderId: $orderId Subscription renewal order created");
                 }
 
                 if ($wcSubscription->needs_payment() === true)
@@ -282,7 +282,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                     $wcSubscription->update_status( 'active' );
                     $this->update_next_payment_date($subscription, $wcSubscription);
                     error_log("Subscription Charged successfully");
-                    $this->subscriptionInfoLog("Woocommerce orderId: $orderId Subscription charged successfully for renewal order");
+                    subscriptionInfoLog("Woocommerce orderId: $orderId Subscription charged successfully for renewal order");
                 }
             }
             else
@@ -408,7 +408,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             );
 
             error_log(json_encode($log));
-            $this->subscriptionErrorLog("Woocommerce orderId: $orderId woocommerce subscription not found");
+            subscriptionErrorLog("Woocommerce orderId: $orderId woocommerce subscription not found");
 
             return null;
         }
@@ -433,7 +433,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         catch (Exception $e)
         {
             $message = $e->getMessage();
-            $this->subscriptionErrorLog("Subscription fetch failed with the message $message");
+            subscriptionErrorLog("Subscription fetch failed with the message $message");
 
             return "RAZORPAY ERROR: Subscription fetch failed with the message $message";
         }
@@ -466,7 +466,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             $wcSubscription->update_status( 'cancelled' );
 
             error_log("Subscription cancelled successfully");
-            $this->subscriptionInfoLog("Woocommerce orderId: $orderId Subscription cancel webhook finished and updated status");
+            subscriptionInfoLog("Woocommerce orderId: $orderId Subscription cancel webhook finished and updated status");
         }
 
     }
@@ -524,7 +524,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         if (empty($subscriptionId) === false)
         {
             $orderId = $data['payload']['subscription']['entity']['notes']['woocommerce_order_id'];
-            $this->subscriptionInfoLog("Woocommerce orderId: $orderId subscription pause webhook initiated");
+            subscriptionInfoLog("Woocommerce orderId: $orderId subscription pause webhook initiated");
 
             return $this->pauseSubscription($subscriptionId);
         }
@@ -548,7 +548,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         catch (Exception $e)
         {
             $message = $e->getMessage();
-            $this->subscriptionErrorLog("Subscription fetch failed with the message $message");
+            subscriptionErrorLog("Subscription fetch failed with the message $message");
 
             return "RAZORPAY ERROR: Subscription fetch failed with the message $message";
         }
@@ -581,7 +581,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             $wcSubscription->update_status( 'on-hold' );
 
             error_log("Subscription paused successfully");
-            $this->subscriptionInfoLog("Woocommerce orderId: $orderId Subscription pause webhook finished and updated status");
+            subscriptionInfoLog("Woocommerce orderId: $orderId Subscription pause webhook finished and updated status");
         }
 
     }
@@ -604,7 +604,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         if (empty($subscriptionId) === false)
         {
             $orderId = $data['payload']['subscription']['entity']['notes']['woocommerce_order_id'];
-            $this->subscriptionInfoLog("Woocommerce orderId: $orderId subscription resume webhook initiated");
+            subscriptionInfoLog("Woocommerce orderId: $orderId subscription resume webhook initiated");
 
             return $this->resumeSubscription($subscriptionId);
         }
@@ -628,7 +628,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         catch (Exception $e)
         {
             $message = $e->getMessage();
-            $this->subscriptionErrorLog("Subscription fetch failed with the message $message");
+            subscriptionErrorLog("Subscription fetch failed with the message $message");
 
             return "RAZORPAY ERROR: Subscription fetch failed with the message $message";
         }
@@ -661,18 +661,9 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             $wcSubscription->update_status( 'active' );
 
             error_log("Subscription reactivated successfully");
-            $this->subscriptionInfoLog("Woocommerce orderId: $orderId Subscription resume webhook finished and reactivated");
+            subscriptionInfoLog("Woocommerce orderId: $orderId Subscription resume webhook finished and reactivated");
         }
 
     }
 
-    function subscriptionInfoLog($message){
-        $logger = wc_get_logger();
-        $logger->info($message, array('source' => 'razorpay-subscription-log'));
-    }
-
-    function subscriptionErrorLog($message){
-        $logger = wc_get_logger();
-        $logger->error($message, array('source' => 'razorpay-subscription-log'));
-    }
 }

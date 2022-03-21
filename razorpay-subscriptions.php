@@ -193,6 +193,7 @@ function woocommerce_razorpay_subscriptions_init()
             catch (Exception $e)
             {
                 $message = $e->getMessage();
+                subscriptionErrorLog("Woocommerce orderId: $orderId Subscription creation failed with the following message: $message");
 
                 throw new Exception("RAZORPAY ERROR: Subscription creation failed with the following message: '$message'");
             }
@@ -345,4 +346,14 @@ function razorpay_webhook_subscription_init()
     $rzpWebhook = new RZP_Subscription_Webhook();
 
     $rzpWebhook->process();
+}
+
+function subscriptionInfoLog($message){
+    $logger = wc_get_logger();
+    $logger->info($message, array('source' => 'razorpay-subscription-log'));
+}
+
+function subscriptionErrorLog($message){
+    $logger = wc_get_logger();
+    $logger->error($message, array('source' => 'razorpay-subscription-log'));
 }
