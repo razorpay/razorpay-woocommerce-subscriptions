@@ -4,8 +4,8 @@
 Plugin Name: Razorpay Subscriptions for WooCommerce
 Plugin URI: https://razorpay.com
 Description: Razorpay Subscriptions for WooCommerce
-Version: 2.3.1
-Stable tag: 2.3.1
+Version: 2.3.2
+Stable tag: 2.3.2
 Author: Razorpay
 Author URI: https://razorpay.com
 */
