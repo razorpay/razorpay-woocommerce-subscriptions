@@ -4,8 +4,8 @@
 Plugin Name: Razorpay Subscriptions for WooCommerce
 Plugin URI: https://razorpay.com
 Description: Razorpay Subscriptions for WooCommerce
-Version: 2.3.1
-Stable tag: 2.3.1
+Version: 2.3.2
+Stable tag: 2.3.2
 Author: Razorpay
 Author URI: https://razorpay.com
 */
@@ -21,7 +21,12 @@ $pluginRoot = WP_PLUGIN_DIR . '/' . RAZORPAY_WOOCOMMERCE_PLUGIN;
 
 if ( ! is_dir( $pluginRoot ) )
 {
-    return;
+    define('RAZORPAY_WOOCOMMERCE_PLUGIN_FROM_GIT', 'razorpay-woocommerce');
+    $pluginRoot = WP_PLUGIN_DIR . '/' . RAZORPAY_WOOCOMMERCE_PLUGIN_FROM_GIT;
+
+    if(! is_dir( $pluginRoot )){
+        return;
+    }
 }
 
 require_once $pluginRoot . '/woo-razorpay.php';
@@ -29,6 +34,7 @@ require_once $pluginRoot . '/razorpay-sdk/Razorpay.php';
 require_once __DIR__ . '/includes/razorpay-subscription-webhook.php';
 require_once __DIR__ . '/includes/Errors/SubscriptionErrorCode.php';
 require_once __DIR__ . '/includes/razorpay-subscriptions.php';
+require_once __DIR__ . '/includes/razorpay-subscription-debug.php';
 
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors;
@@ -188,6 +194,7 @@ function woocommerce_razorpay_subscriptions_init()
             catch (Exception $e)
             {
                 $message = $e->getMessage();
+                rzpSubscriptionErrorLog("Woocommerce orderId: $orderId Subscription creation failed with the following message: $message");
 
                 throw new Exception("RAZORPAY ERROR: Subscription creation failed with the following message: '$message'");
             }
