@@ -58,7 +58,7 @@ class RZP_Subscriptions
         catch (Exception $e)
         {
             $message = $e->getMessage();
-            subscriptionErrorLog("Woocommerce orderId: $orderId Subscription creation failed with the following message: $message");
+            rzpSubscriptionErrorLog("Woocommerce orderId: $orderId Subscription creation failed with the following message: $message");
 
             throw new Errors\Error(
                 $message,
@@ -90,7 +90,7 @@ class RZP_Subscriptions
         catch (Exception $e)
         {
             $message = $e->getMessage();
-            subscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription cancel failed with the following message: $message");
+            rzpSubscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription cancel failed with the following message: $message");
 
             throw new Errors\Error(
                 $message,
@@ -123,7 +123,7 @@ class RZP_Subscriptions
 
         if ($length == 0)
         {
-            subscriptionErrorLog("Woocommerce orderId: $orderId Perpetual subscriptions are not supported");
+            rzpSubscriptionErrorLog("Woocommerce orderId: $orderId Perpetual subscriptions are not supported");
 
             throw new Exception('Perpetual subscriptions are not supported.');
         }
@@ -393,7 +393,7 @@ class RZP_Subscriptions
         if ($count > 1)
         {
             $orderId = $order->get_id();
-            subscriptionErrorLog("Woocommerce orderId: $orderId Currently Razorpay does not support more than one product in the cart if one of the products is a subscription");
+            rzpSubscriptionErrorLog("Woocommerce orderId: $orderId Currently Razorpay does not support more than one product in the cart if one of the products is a subscription");
 
             throw new Exception('Currently Razorpay does not support more than'
                 . ' one product in the cart if one of the products'
@@ -427,7 +427,7 @@ class RZP_Subscriptions
         catch (Exception $e)
         {
             $message = $e->getMessage();
-            subscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription pause failed with the following message: $message");
+            rzpSubscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription pause failed with the following message: $message");
 
             throw new Errors\Error(
                 $message,
@@ -452,7 +452,7 @@ class RZP_Subscriptions
         catch (Exception $e)
         {
             $message = $e->getMessage();
-            subscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription resume failed with the following message: $message");
+            rzpSubscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription resume failed with the following message: $message");
 
             throw new Errors\Error(
                 $message,
