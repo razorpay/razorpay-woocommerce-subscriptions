@@ -42,19 +42,6 @@ use Razorpay\Api\Errors;
 // Load this after the woo-razorpay plugin
 add_action('plugins_loaded', 'woocommerce_razorpay_subscriptions_init', 20);
 add_action('admin_post_nopriv_rzp_wc_webhook', 'razorpay_webhook_subscription_init', 20);
-add_action('setup_extra_setting_fields', 'add_subscription_webhook_events');
-
-function add_subscription_webhook_events( &$args ) {
-
-    $subsFields = array(
-        RZP_Webhook::SUBSCRIPTION_CANCELLED        => 'subscription.cancelled',
-        RZP_Webhook::SUBSCRIPTION_PAUSED           => 'subscription.paused',
-        RZP_Webhook::SUBSCRIPTION_RESUMED          => 'subscription.resumed',
-    );
-
-    $args['webhook_events']['options'] = array_merge($args['webhook_events']['options'], $subsFields);
-
-}
 
 function woocommerce_razorpay_subscriptions_init()
 {
@@ -118,6 +105,16 @@ function woocommerce_razorpay_subscriptions_init()
             $this->mergeSettingsWithParentPlugin();
 
             $this->setupExtraHooks();
+            
+            if (version_compare(WOOCOMMERCE_VERSION, '2.0.0', '>='))
+            {
+                add_action( "woocommerce_update_options_payment_gateways_{$this->id}", array($this, 'enableSubscriptionWebhooks'));
+                add_action( "woocommerce_update_options_payment_gateways_razorpay", array($this, 'enableSubscriptionWebhooks'));
+            }
+            else
+            {
+                add_action( "woocommerce_update_options_payment_gateways", array($this, 'enableSubscriptionWebhooks'));
+            }
         }
 
         private function mergeSettingsWithParentPlugin()
@@ -139,6 +136,32 @@ function woocommerce_razorpay_subscriptions_init()
             }
         }
 
+        /**
+         * enableSubscriptionWebhooks is to combine subscription events with PG plugin events 
+         * and auto enable webhooks on updating the settings
+         */
+        public function enableSubscriptionWebhooks()
+        {
+            $api = $this->getRazorpayApiInstance();
+
+            $features = $api->request->request("GET", "accounts/me/features");
+
+            foreach ($features['assigned_features'] as $feature)
+            {
+                if($feature['name'] === 'subscriptions'
+                    and $feature['entity_type'] === 'merchant')
+                {
+                    $this->defaultWebhookEvents += array(
+                        'subscription.cancelled' => true,
+                        'subscription.resumed' => true,
+                        'subscription.paused' => true
+                    );
+
+                    $this->autoEnableWebhook();
+                }
+            }
+        }
+        
         protected function setupExtraHooks()
         {
             add_action('woocommerce_subscription_status_cancelled', array(&$this, 'subscription_cancelled'));
