@@ -4,8 +4,8 @@
 Plugin Name: Razorpay Subscriptions for WooCommerce
 Plugin URI: https://razorpay.com
 Description: Razorpay Subscriptions for WooCommerce
-Version: 2.3.2
-Stable tag: 2.3.2
+Version: 2.3.3
+Stable tag: 2.3.3
 Author: Razorpay
 Author URI: https://razorpay.com
 */
@@ -105,7 +105,7 @@ function woocommerce_razorpay_subscriptions_init()
             $this->mergeSettingsWithParentPlugin();
 
             $this->setupExtraHooks();
-            
+
             if (version_compare(WOOCOMMERCE_VERSION, '2.0.0', '>='))
             {
                 add_action( "woocommerce_update_options_payment_gateways_{$this->id}", array($this, 'enableSubscriptionWebhooks'));
@@ -137,7 +137,7 @@ function woocommerce_razorpay_subscriptions_init()
         }
 
         /**
-         * enableSubscriptionWebhooks is to combine subscription events with PG plugin events 
+         * enableSubscriptionWebhooks is to combine subscription events with PG plugin events
          * and auto enable webhooks on updating the settings
          */
         public function enableSubscriptionWebhooks()
@@ -161,7 +161,7 @@ function woocommerce_razorpay_subscriptions_init()
                 }
             }
         }
-        
+
         protected function setupExtraHooks()
         {
             add_action('woocommerce_subscription_status_cancelled', array(&$this, 'subscription_cancelled'));
