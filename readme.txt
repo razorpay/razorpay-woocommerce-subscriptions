@@ -3,8 +3,8 @@ Contributors: razorpay
 Tags: razorpay, payments, india, woocommerce, ecommerce, recurring, subscriptions
 Requires at least: 3.9.2
 Requires PHP: 5.6.0
-Tested up to: 5.9.3
-Stable tag: 2.3.3
+Tested up to: 6.0.1
+Stable tag: 2.3.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -100,6 +100,10 @@ We support Subscriptions for a maximum duration of 100 years.
 The number of billing cycles depends if the subscription is billed daily, weekly, monthly or yearly.
 
 == Changelog ==
+
+= 2.3.4 =
+* Fixed multiple payment options on checkout.
+* Tested upto WordPress 6.0.1 and WooCommerce subscription 4.0.2.
 
 = 2.3.3 =
 * Add Auto Enable Webhooks feature.
