@@ -184,6 +184,13 @@ function woocommerce_razorpay_subscriptions_init()
                     unset($availableGateways[$this->id]);
                 }
             }
+            else
+            {
+                if (isset($availableGateways['razorpay']))
+                {
+                    unset($availableGateways['razorpay']);
+                }
+            }
 
             return $availableGateways;
         }
