@@ -24,13 +24,13 @@ class RZP_Subscription_Webhook extends RZP_Webhook
     protected $razorpay;
 
     /**
-     * Processes a payment authorized webhook
+     * Processes a subscription charged webhook
      *
      * @param array $data
      * @return string|void
      * @throws WC_Data_Exception
      */
-    protected function paymentAuthorized(array $data)
+    protected function subscriptionCharged(array $data)
     {
         //
         // Order entity should be sent as part of the webhook payload
@@ -40,15 +40,13 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         if (isset($data['payload']['payment']['entity']['invoice_id']) === true)
         {
-            $invoiceId = $data['payload']['payment']['entity']['invoice_id'];
-
-            $subscriptionId = $this->getSubscriptionId($invoiceId, $data['event']);
+            $subscriptionId = $data['payload']['subscription']['entity']['id'];
 
             // Process subscription this way
             if (empty($subscriptionId) === false)
             {
-                $orderId = $data['payload']['payment']['entity']['notes']['woocommerce_order_id'];
-                rzpSubscriptionInfoLog("Woocommerce orderId: $orderId payment authorized webhook initiated");
+                $orderId = $data['payload']['subscription']['entity']['notes']['woocommerce_order_id'];
+                rzpSubscriptionInfoLog("Woocommerce orderId: $orderId subscription charged webhook initiated");
 
                 return $this->processSubscription($paymentId, $subscriptionId);
             }
@@ -257,7 +255,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 $order_note = 'Subscription renewal payment due:';
 
                 // Always put the subscription on hold in case something goes wrong while trying to process renewal
-                $wcSubscription->update_status( 'on-hold', $order_note );
+                // $wcSubscription->update_status( 'on-hold', $order_note );
 
                 //
                 // If subscription has been paid for on razorpay's end, we need to mark the
@@ -279,7 +277,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
                 if ($wcSubscription->needs_payment() === true)
                 {
                     $last_order->update_status( 'completed' );
-                    $wcSubscription->update_status( 'active' );
+                    // $wcSubscription->update_status( 'active' );
                     $this->update_next_payment_date($subscription, $wcSubscription);
                     error_log("Subscription Charged successfully");
                     rzpSubscriptionInfoLog("Woocommerce orderId: $orderId Subscription charged successfully for renewal order");
