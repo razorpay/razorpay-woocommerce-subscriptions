@@ -43,8 +43,8 @@ use Razorpay\Api\Errors;
 add_action('plugins_loaded', 'woocommerce_razorpay_subscriptions_init', 20);
 add_action('admin_post_nopriv_rzp_wc_webhook', 'razorpay_webhook_subscription_init', 20);
 
-add_action('activated_plugin', 'razorpaySubscriptionPluginActivated', 10, 2 );
-add_action('deactivated_plugin', 'razorpaySubscriptionPluginDeactivated', 10, 2 );
+add_action('activated_plugin', 'razorpaySubscriptionPluginActivated', 10, 2);
+add_action('deactivated_plugin', 'razorpaySubscriptionPluginDeactivated', 10, 2);
 
 function woocommerce_razorpay_subscriptions_init()
 {
@@ -359,6 +359,7 @@ function razorpaySubscriptionPluginActivated()
             and $feature['entity_type'] === 'merchant')
         {
             update_option('rzp_subscription_webhook_enable_flag', true);
+            break;
         }
     }
 }
