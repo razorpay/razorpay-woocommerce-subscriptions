@@ -43,8 +43,8 @@ use Razorpay\Api\Errors;
 add_action('plugins_loaded', 'woocommerce_razorpay_subscriptions_init', 20);
 add_action('admin_post_nopriv_rzp_wc_webhook', 'razorpay_webhook_subscription_init', 20);
 
-add_action('activated_plugin', 'razorpaySubscriptionPluginActivated', 10, 2);
-add_action('deactivated_plugin', 'razorpaySubscriptionPluginDeactivated', 10, 2);
+register_activation_hook(__FILE__, 'razorpaySubscriptionPluginActivated');
+register_deactivation_hook(__FILE__, 'razorpaySubscriptionPluginDeactivated');
 
 function woocommerce_razorpay_subscriptions_init()
 {
