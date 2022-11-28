@@ -43,6 +43,9 @@ use Razorpay\Api\Errors;
 add_action('plugins_loaded', 'woocommerce_razorpay_subscriptions_init', 20);
 add_action('admin_post_nopriv_rzp_wc_webhook', 'razorpay_webhook_subscription_init', 20);
 
+register_activation_hook(__FILE__, 'razorpaySubscriptionPluginActivated');
+register_deactivation_hook(__FILE__, 'razorpaySubscriptionPluginDeactivated');
+
 function woocommerce_razorpay_subscriptions_init()
 {
     if (!class_exists('WC_Payment_Gateway'))
@@ -105,16 +108,6 @@ function woocommerce_razorpay_subscriptions_init()
             $this->mergeSettingsWithParentPlugin();
 
             $this->setupExtraHooks();
-
-            if (version_compare(WOOCOMMERCE_VERSION, '2.0.0', '>='))
-            {
-                add_action( "woocommerce_update_options_payment_gateways_{$this->id}", array($this, 'enableSubscriptionWebhooks'));
-                add_action( "woocommerce_update_options_payment_gateways_razorpay", array($this, 'enableSubscriptionWebhooks'));
-            }
-            else
-            {
-                add_action( "woocommerce_update_options_payment_gateways", array($this, 'enableSubscriptionWebhooks'));
-            }
         }
 
         private function mergeSettingsWithParentPlugin()
@@ -133,32 +126,6 @@ function woocommerce_razorpay_subscriptions_init()
             foreach ($parentSettings as $key)
             {
                 $this->settings[$key] = $wcRazorpay->settings[$key];
-            }
-        }
-
-        /**
-         * enableSubscriptionWebhooks is to combine subscription events with PG plugin events
-         * and auto enable webhooks on updating the settings
-         */
-        public function enableSubscriptionWebhooks()
-        {
-            $api = $this->getRazorpayApiInstance();
-
-            $features = $api->request->request("GET", "accounts/me/features");
-
-            foreach ($features['assigned_features'] as $feature)
-            {
-                if($feature['name'] === 'subscriptions'
-                    and $feature['entity_type'] === 'merchant')
-                {
-                    $this->defaultWebhookEvents += array(
-                        'subscription.cancelled' => true,
-                        'subscription.resumed' => true,
-                        'subscription.paused' => true
-                    );
-
-                    $this->autoEnableWebhook();
-                }
             }
         }
 
@@ -377,4 +344,32 @@ function razorpay_webhook_subscription_init()
     $rzpWebhook = new RZP_Subscription_Webhook();
 
     $rzpWebhook->process();
+}
+
+function razorpaySubscriptionPluginActivated()
+{
+    $rzp = new WC_Razorpay();
+    $api = $rzp->getRazorpayApiInstance();
+
+    $features = $api->request->request("GET", "accounts/me/features");
+
+    foreach ($features['assigned_features'] as $feature)
+    {
+        if($feature['name'] === 'subscriptions'
+            and $feature['entity_type'] === 'merchant')
+        {
+            update_option('rzp_subscription_webhook_enable_flag', true);
+            break;
+        }
+    }
+}
+
+function razorpaySubscriptionPluginDeactivated()
+{
+    $subscriptionWebhookFlag =  get_option('rzp_subscription_webhook_enable_flag');
+
+    if ($subscriptionWebhookFlag)
+    {
+        delete_option('rzp_subscription_webhook_enable_flag');
+    }
 }
