@@ -133,8 +133,8 @@ function woocommerce_razorpay_subscriptions_init()
         {
             add_action('woocommerce_subscription_status_cancelled', array(&$this, 'subscription_cancelled'));
             add_action( 'woocommerce_subscription_status_pending-cancel',  array(&$this, 'subscription_cancelled'));
-            add_action( 'woocommerce_subscription_status_on-hold',  array(&$this, 'subscription_on_hold'));
-            add_action( 'woocommerce_subscription_status_on-hold_to_active',  array(&$this, 'subscription_reactivate'));
+//             add_action( 'woocommerce_subscription_status_on-hold',  array(&$this, 'subscription_on_hold'));
+//             add_action( 'woocommerce_subscription_status_on-hold_to_active',  array(&$this, 'subscription_reactivate'));
 
             // Hide Subscriptions Gateway for non-subscription payments
             add_filter('woocommerce_available_payment_gateways', array($this, 'disable_non_subscription'), 20);
