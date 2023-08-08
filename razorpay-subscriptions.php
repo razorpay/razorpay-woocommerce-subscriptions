@@ -285,7 +285,7 @@ function woocommerce_razorpay_subscriptions_init()
                 if ($this->isHposEnabled)
                 {
                     $order = wc_get_order($parentOrder->get_id());
-                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID);
                 }
                 else
                 {
@@ -327,7 +327,7 @@ function woocommerce_razorpay_subscriptions_init()
                 if ($this->isHposEnabled())
                 {
                     $order = wc_get_order($parentOrder->get_id());
-                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID);
                 }
                 else
                 {
@@ -363,7 +363,7 @@ function woocommerce_razorpay_subscriptions_init()
                 if ($this->isHposEnabled())
                 {
                     $order = wc_get_order($parentOrder->get_id());
-                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID);
                 }
                 else
                 {
