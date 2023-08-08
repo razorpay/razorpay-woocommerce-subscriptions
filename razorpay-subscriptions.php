@@ -195,7 +195,7 @@ function woocommerce_razorpay_subscriptions_init()
             {
                 $subscriptionId = $this->subscriptions->createSubscription($orderId);
 
-                if ($this->isHposEnabled)
+                if ($this->isHposEnabled())
                 {
                     $order->add_meta_data(self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
                     $order->save();
@@ -251,7 +251,7 @@ function woocommerce_razorpay_subscriptions_init()
 
             $api->utility->verifyPaymentSignature($attributes);
 
-            if ($this->isHposEnabled)
+            if ($this->isHposEnabled())
             {
                 $order = wc_get_order($orderId);
                 $order->add_meta_data(self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
@@ -282,7 +282,7 @@ function woocommerce_razorpay_subscriptions_init()
                 }
 
                 $subscriptionId = '';
-                if ($this->isHposEnabled)
+                if ($this->isHposEnabled())
                 {
                     $order = wc_get_order($parentOrder->get_id());
                     $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID);
