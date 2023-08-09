@@ -38,6 +38,7 @@ require_once __DIR__ . '/includes/razorpay-subscription-debug.php';
 
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors;
+use Automattic\WooCommerce\Utilities\OrderUtil;
 
 // Load this after the woo-razorpay plugin
 add_action('plugins_loaded', 'woocommerce_razorpay_subscriptions_init', 20);
@@ -119,13 +120,23 @@ function woocommerce_razorpay_subscriptions_init()
             $parentSettings = array(
                 'key_id',
                 'key_secret',
-                'webhook_secret',
                 'order_success_message',
             );
 
             foreach ($parentSettings as $key)
             {
                 $this->settings[$key] = $wcRazorpay->settings[$key];
+            }
+
+            $this->setting['webhook_secret'] = (empty($wcRazorpay->getSetting('webhook_secret')) === false) 
+                                                ? $wcRazorpay->getSetting('webhook_secret') 
+                                                : get_option('webhook_secret');
+
+            if (empty($this->setting['webhook_secret']) === true) {
+                $this->setting['webhook_secret'] = get_option('rzp_webhook_secret');
+                if (empty($this->setting['webhook_secret']) === false) {
+                    $wcRazorpay->update_option('webhook_secret', $this->setting['webhook_secret']);
+                }
             }
         }
 
@@ -178,7 +189,7 @@ function woocommerce_razorpay_subscriptions_init()
             return self::RAZORPAY_SUBSCRIPTION_ID . $orderId;
         }
 
-        protected function getRazorpayPaymentParams($orderId)
+        protected function getRazorpayPaymentParams($order, $orderId)
         {
             $this->subscriptions = new RZP_Subscriptions($this->getSetting('key_id'), $this->getSetting('key_secret'));
 
@@ -186,7 +197,15 @@ function woocommerce_razorpay_subscriptions_init()
             {
                 $subscriptionId = $this->subscriptions->createSubscription($orderId);
 
-                add_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
+                if ($this->isHposEnabled())
+                {
+                    $order->add_meta_data(self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
+                    $order->save();
+                }
+                else
+                {
+                    add_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
+                }
             }
             catch (Exception $e)
             {
@@ -234,7 +253,16 @@ function woocommerce_razorpay_subscriptions_init()
 
             $api->utility->verifyPaymentSignature($attributes);
 
-            add_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
+            if ($this->isHposEnabled())
+            {
+                $order = wc_get_order($orderId);
+                $order->add_meta_data(self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
+                $order->save();
+            }
+            else
+            {
+                add_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
+            }
         }
 
         public function subscription_cancelled($subscription)
@@ -255,8 +283,17 @@ function woocommerce_razorpay_subscriptions_init()
                     return;
                 }
 
-                $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
-
+                $subscriptionId = '';
+                if ($this->isHposEnabled())
+                {
+                    $order = wc_get_order($parentOrder->get_id());
+                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID);
+                }
+                else
+                {
+                    $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                }
+                
                 //Canceling the subscription value
                 //0 (default): Cancel the subscription immediately.
                 //1: Cancel the subscription at the end of the current billing cycle.
@@ -288,7 +325,16 @@ function woocommerce_razorpay_subscriptions_init()
                     return;
                 }
 
-                $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                $subscriptionId = '';
+                if ($this->isHposEnabled())
+                {
+                    $order = wc_get_order($parentOrder->get_id());
+                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID);
+                }
+                else
+                {
+                    $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                }
 
                 $subscriptionPauseAt = ['pause_at' => 'now'];
 
@@ -315,7 +361,16 @@ function woocommerce_razorpay_subscriptions_init()
                     return;
                 }
 
-                $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                $subscriptionId = '';
+                if ($this->isHposEnabled())
+                {
+                    $order = wc_get_order($parentOrder->get_id());
+                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID);
+                }
+                else
+                {
+                    $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
+                }
 
                 $subscriptionResumeAt = ['resume_at' => 'now'];
 
@@ -323,6 +378,12 @@ function woocommerce_razorpay_subscriptions_init()
             }catch (Exception $e) {
                 return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
             }
+        }
+
+        function isHposEnabled()
+        {
+            return (class_exists('Automattic\WooCommerce\Utilities\OrderUtil') and
+                    OrderUtil::custom_orders_table_usage_is_enabled());
         }
     }
 

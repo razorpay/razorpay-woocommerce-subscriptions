@@ -228,7 +228,7 @@ class RZP_Subscription_Webhook extends RZP_Webhook
         }
 
         //If webhook trigger on first payment of subscription, then only mark payment completed
-        if(($paymentCount == 1) and ($subscription->paid_count == 1) and ($subscription->auth_attempts == 0)) {
+        if(($paymentCount == 0) and ($subscription->paid_count == 1) and ($subscription->auth_attempts == 0)) {
 
             if ($wcSubscription->needs_payment() === true)
             {
