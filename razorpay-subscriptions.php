@@ -128,7 +128,9 @@ function woocommerce_razorpay_subscriptions_init()
                 $this->settings[$key] = $wcRazorpay->settings[$key];
             }
 
-            $this->setting['webhook_secret'] = (empty($wcRazorpay->getSetting('webhook_secret')) === false) ? $wcRazorpay->getSetting('webhook_secret') : get_option('webhook_secret');
+            $this->setting['webhook_secret'] = (empty($wcRazorpay->getSetting('webhook_secret')) === false) 
+                                                ? $wcRazorpay->getSetting('webhook_secret') 
+                                                : get_option('webhook_secret');
 
             if (empty($this->setting['webhook_secret']) === true) {
                 $this->setting['webhook_secret'] = get_option('rzp_webhook_secret');
