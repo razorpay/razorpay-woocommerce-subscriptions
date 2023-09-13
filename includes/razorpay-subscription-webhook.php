@@ -227,6 +227,13 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             return true;
         }
 
+        if($paymentCount === $subscription->paid_count
+            and !$wcSubscription->needs_payment())
+        {
+            rzpSubscriptionInfoLog("skipping subscription.charged event as payment is completed");
+            return;
+        }
+
         //If webhook trigger on first payment of subscription, then only mark payment completed
         if(($paymentCount == 0) and ($subscription->paid_count == 1) and ($subscription->auth_attempts == 0)) {
 
