@@ -144,9 +144,10 @@ class RZP_Subscriptions
             'source'          => 'WooCommerce'
         );
 
-        $signUpFee = WC_Subscriptions_Product::get_sign_up_fee($product['product_id']);
-
         // We add the signup fee as an addon
+        $signUpFee = wcs_get_price_including_tax(wc_get_product($product['product_id']),
+            array("price" => WC_Subscriptions_Product::get_sign_up_fee($product['product_id']))
+        );
 
         if ($signUpFee)
         {
