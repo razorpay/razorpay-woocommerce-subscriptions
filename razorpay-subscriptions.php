@@ -153,7 +153,13 @@ function woocommerce_razorpay_subscriptions_init()
 
         public function disable_non_subscription($availableGateways)
         {
-            $enable = WC_Subscriptions_Cart::cart_contains_subscription();
+            $enable = false;
+
+            if (class_exists(WC_Subscriptions_Cart::class) and
+                WC_Subscriptions_Cart::cart_contains_subscription())
+            {
+                $enable = true;
+            }
 
             if ($enable === false)
             {
