@@ -91,6 +91,12 @@ class RZP_Subscriptions
         {
             $message = $e->getMessage();
             rzpSubscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription cancel failed with the following message: $message");
+
+            throw new Errors\Error(
+                $message,
+                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_CANCELLATION_FAILED,
+                400
+            );
         }
     }
 
@@ -423,6 +429,12 @@ class RZP_Subscriptions
         {
             $message = $e->getMessage();
             rzpSubscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription pause failed with the following message: $message");
+
+            throw new Errors\Error(
+                $message,
+                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_PAUSE_FAILED,
+                400
+            );
         }
     }
 
@@ -442,6 +454,12 @@ class RZP_Subscriptions
         {
             $message = $e->getMessage();
             rzpSubscriptionErrorLog("Razorpay subscriptionId: $subscriptionId Subscription resume failed with the following message: $message");
+
+            throw new Errors\Error(
+                $message,
+                WooErrors\SubscriptionErrorCode::API_SUBSCRIPTION_RESUME_FAILED,
+                400
+            );
         }
     }
 
