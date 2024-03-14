@@ -307,8 +307,9 @@ function woocommerce_razorpay_subscriptions_init()
                 if($subscription->get_status() == "pending-cancel"){
                     $subscriptionCycleEndAt['cancel_at_cycle_end'] = 1;
                 }
-
-                $this->subscriptions->cancelSubscription($subscriptionId,$subscriptionCycleEndAt);
+                if('' != $subscriptionId){
+                    $this->subscriptions->cancelSubscription($subscriptionId,$subscriptionCycleEndAt);
+                }
             }catch (Exception $e) {
                 return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
             }
@@ -343,8 +344,9 @@ function woocommerce_razorpay_subscriptions_init()
                 }
 
                 $subscriptionPauseAt = ['pause_at' => 'now'];
-
-                $this->subscriptions->pauseSubscription($subscriptionId,$subscriptionPauseAt);
+                if('' != $subscriptionId){
+                    $this->subscriptions->pauseSubscription($subscriptionId,$subscriptionPauseAt);
+                }
             }catch (Exception $e) {
                 return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
             }
@@ -380,7 +382,9 @@ function woocommerce_razorpay_subscriptions_init()
 
                 $subscriptionResumeAt = ['resume_at' => 'now'];
 
-                $this->subscriptions->resumeSubscription($subscriptionId,$subscriptionResumeAt);
+                if('' != $subscriptionId){
+                    $this->subscriptions->resumeSubscription($subscriptionId,$subscriptionResumeAt);
+                }
             }catch (Exception $e) {
                 return new WP_Error('Razorpay Error: ', __($e->getMessage(), 'woocommerce-subscription'));
             }
