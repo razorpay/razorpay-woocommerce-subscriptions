@@ -9,8 +9,8 @@ const subscription_Content = () => {
 const subscription_Block_Gateway = {
     name: 'razorpay_subscriptions',
     label: subscription_label,
-    content: Object(window.wp.element.createElement)(subscription_Content, null ),
-    edit: Object(window.wp.element.createElement)(subscription_Content, null ),
+    content: Object(window.wp.element.createElement)(subscription_Content, null),
+    edit: Object(window.wp.element.createElement)(subscription_Content, null),
     canMakePayment: () => true,
     ariaLabel: subscription_label,
     supports: {
@@ -18,5 +18,4 @@ const subscription_Block_Gateway = {
     },
 };
 
-window.wc.wcBlocksRegistry.registerPaymentMethod(subscription_Block_Gateway );
- 
+window.wc.wcBlocksRegistry.registerPaymentMethod(subscription_Block_Gateway);
