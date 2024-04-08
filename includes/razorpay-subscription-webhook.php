@@ -466,7 +466,8 @@ class RZP_Subscription_Webhook extends RZP_Webhook
 
         $wcSubscription = array_values($wcSubscription)[0];
 
-        if ( $wcSubscription->has_status( 'active' ))
+        if ($wcSubscription->has_status('active') or
+            $wcSubscription->has_status('on-hold'))
         {
             $wcSubscription->update_status( 'cancelled' );
 
