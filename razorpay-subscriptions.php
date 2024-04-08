@@ -39,6 +39,7 @@ require_once __DIR__ . '/includes/razorpay-subscription-debug.php';
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors;
 use Automattic\WooCommerce\Utilities\OrderUtil;
+use Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry;
 
 // Load this after the woo-razorpay plugin
 add_action('plugins_loaded', 'woocommerce_razorpay_subscriptions_init', 20);
@@ -46,6 +47,37 @@ add_action('admin_post_nopriv_rzp_wc_webhook', 'razorpay_webhook_subscription_in
 
 register_activation_hook(__FILE__, 'razorpaySubscriptionPluginActivated');
 register_deactivation_hook(__FILE__, 'razorpaySubscriptionPluginDeactivated');
+
+add_action('before_woocommerce_init', function() {
+    if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil'))
+    {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+    }
+});
+
+add_action('woocommerce_blocks_loaded', 'razorpay_subscription_woocommerce_block_support');
+
+function razorpay_subscription_woocommerce_block_support()
+{
+    if (class_exists('Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType'))
+    {
+        require_once dirname( __FILE__ ) . '/checkout-block.php';
+
+        add_action(
+          'woocommerce_blocks_payment_method_type_registration',
+          function(PaymentMethodRegistry $payment_method_registry) {
+            $container = Automattic\WooCommerce\Blocks\Package::container();
+            $container->register(
+                WC_Razorpay_Subscription_Blocks::class,
+                function() {
+                    return new WC_Razorpay_Subscription_Blocks();
+                }
+            );
+            $payment_method_registry->register($container->get(WC_Razorpay_Subscription_Blocks::class));
+          }
+        );
+    }
+}
 
 function woocommerce_razorpay_subscriptions_init()
 {
@@ -95,6 +127,8 @@ function woocommerce_razorpay_subscriptions_init()
          * @var RZP_Subscriptions
          */
         protected $subscriptions;
+
+        public $setting;
 
         const RAZORPAY_SUBSCRIPTION_ID       = 'razorpay_subscription_id';
         const DEFAULT_LABEL                  = 'MasterCard/Visa Credit Card';
