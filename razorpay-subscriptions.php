@@ -4,7 +4,7 @@
 Plugin Name: Razorpay Subscriptions for WooCommerce
 Plugin URI: https://razorpay.com
 Description: Razorpay Subscriptions for WooCommerce
-Version: 2.3.8
+Version: 2.3.9
 Stable tag: 2.3.9
 Author: Razorpay
 Author URI: https://razorpay.com
@@ -452,16 +452,23 @@ function razorpaySubscriptionPluginActivated()
     $rzp = new WC_Razorpay();
     $api = $rzp->getRazorpayApiInstance();
 
-    $features = $api->request->request("GET", "accounts/me/features");
-
-    foreach ($features['assigned_features'] as $feature)
+    try
     {
-        if($feature['name'] === 'subscriptions'
-            and $feature['entity_type'] === 'merchant')
+        $features = $api->request->request("GET", "accounts/me/features");
+
+        foreach ($features['assigned_features'] as $feature)
         {
-            update_option('rzp_subscription_webhook_enable_flag', true);
-            break;
+            if ($feature['name'] === 'subscriptions'
+                and $feature['entity_type'] === 'merchant')
+            {
+                update_option('rzp_subscription_webhook_enable_flag', true);
+                break;
+            }
         }
+    }
+    catch (Exception $e)
+    {
+        rzpSubscriptionErrorLog("Unable to add rzp_subscription_webhook_enable_flag: " . $e->getMessage());
     }
 }
 
