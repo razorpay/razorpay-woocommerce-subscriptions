@@ -87,7 +87,7 @@ class RZP_Subscriptions
         {
             $subscription = $this->api->subscription->fetch($subscriptionId);
             
-            if ($subscription->status != 'cancelled')
+            if ($subscription->status !== 'cancelled')
             {
                 $subscription->cancel($subscriptionCycleEndAt);
             }
@@ -430,7 +430,7 @@ class RZP_Subscriptions
         {
             $subscription = $this->api->subscription->fetch($subscriptionId);
 
-            if ($subscription->status == 'active')
+            if ($subscription->status === 'active')
             {
                 $subscription->pause($subscriptionPauseAt);
             }
@@ -460,7 +460,7 @@ class RZP_Subscriptions
         {
             $subscription = $this->api->subscription->fetch($subscriptionId);
 
-            if ($subscription->status == 'paused')
+            if ($subscription->status === 'paused')
             {
                 $subscription->resume($subscriptionResumeAt);
             }
