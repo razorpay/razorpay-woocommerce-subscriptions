@@ -85,7 +85,12 @@ class RZP_Subscriptions
     {
         try
         {
-            $this->api->subscription->fetch($subscriptionId)->cancel($subscriptionCycleEndAt);
+            $subscription = $this->api->subscription->fetch($subscriptionId);
+            
+            if ($subscription->status !== 'cancelled')
+            {
+                $subscription->cancel($subscriptionCycleEndAt);
+            }
         }
         catch (Exception $e)
         {
@@ -423,7 +428,12 @@ class RZP_Subscriptions
     {
         try
         {
-            $this->api->subscription->fetch($subscriptionId)->pause($subscriptionPauseAt);
+            $subscription = $this->api->subscription->fetch($subscriptionId);
+
+            if ($subscription->status === 'active')
+            {
+                $subscription->pause($subscriptionPauseAt);
+            }
         }
         catch (Exception $e)
         {
@@ -448,7 +458,12 @@ class RZP_Subscriptions
     {
         try
         {
-            $this->api->subscription->fetch($subscriptionId)->resume($subscriptionResumeAt);
+            $subscription = $this->api->subscription->fetch($subscriptionId);
+
+            if ($subscription->status === 'paused')
+            {
+                $subscription->resume($subscriptionResumeAt);
+            }
         }
         catch (Exception $e)
         {
