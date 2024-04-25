@@ -231,20 +231,44 @@ function woocommerce_razorpay_subscriptions_init()
 
         protected function getRazorpayPaymentParams($order, $orderId)
         {
+            global $woocommerce;
+
             $this->subscriptions = new RZP_Subscriptions($this->getSetting('key_id'), $this->getSetting('key_secret'));
 
             try
             {
-                $subscriptionId = $this->subscriptions->createSubscription($orderId);
+                $subscriptionId = null;
 
                 if ($this->isHposEnabled())
                 {
-                    $order->add_meta_data(self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
+                    $subscriptionId = $order->get_meta(self::RAZORPAY_SUBSCRIPTION_ID);
+                }
+                else
+                {
+                    $subscriptionId = get_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, true);
+                }
+
+                if (empty($subscriptionId) === false)
+                {
+                    $sessionKey = $this->getSubscriptionSessionKey($orderId);
+
+                    $woocommerce->session->set($sessionKey, $subscriptionId);
+                }
+                else
+                {
+                    $subscriptionId = $this->subscriptions->createSubscription($orderId);
+                }
+                
+                rzpSubscriptionErrorLog("getRazorpayPaymentParams triggered and subscription created with id:-".json_encode($subscriptionId));
+
+                if ($this->isHposEnabled())
+                {
+                    $order->update_meta_data(self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
                     $order->save();
                 }
                 else
                 {
-                    add_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
+                    update_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $subscriptionId);
                 }
             }
             catch (Exception $e)
@@ -296,12 +320,12 @@ function woocommerce_razorpay_subscriptions_init()
             if ($this->isHposEnabled())
             {
                 $order = wc_get_order($orderId);
-                $order->add_meta_data(self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
+                $order->update_meta_data(self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
                 $order->save();
             }
             else
             {
-                add_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
+                update_post_meta($orderId, self::RAZORPAY_SUBSCRIPTION_ID, $attributes[self::RAZORPAY_SUBSCRIPTION_ID]);
             }
         }
 
