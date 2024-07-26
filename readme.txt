@@ -3,7 +3,7 @@ Contributors: razorpay
 Tags: razorpay, payments, india, woocommerce, ecommerce, recurring, subscriptions
 Requires at least: 3.9.2
 Requires PHP: 5.6.0
-Tested up to: 6.2.2
+Tested up to: 6.6
 Stable tag: 2.4.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -19,7 +19,7 @@ Razorpay Subscription Plugin helps you to start accepting recurring payments on 
 - Via Credit Card, Debit Card, Net Banking and UPI payment methods
 - No set-up costs are involved. It’s a free plugin
 
-This is compatible with WooCommerce>=2.4, including the new 3.0 release. It has been tested upto the 5.9.0 WooCommerce release. This also requires the WooCommerce Subscriptions plugin to be installed on your server. (Tested upto 3.1.6 version of the WooCommerce Subscriptions release).
+This is compatible with WooCommerce>=2.4, including the new 9.0 release. It has been tested upto the 9.1.2 WooCommerce release. This also requires the WooCommerce Subscriptions plugin to be installed on your server. (Tested upto 6.5.0 version of the WooCommerce Subscriptions release).
 
 == Installation ==
 
