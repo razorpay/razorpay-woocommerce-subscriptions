@@ -4,8 +4,8 @@
 Plugin Name: Razorpay Subscriptions for WooCommerce
 Plugin URI: https://razorpay.com
 Description: Razorpay Subscriptions for WooCommerce
-Version: 2.4.0
-Stable tag: 2.4.0
+Version: 2.4.1
+Stable tag: 2.4.1
 Author: Razorpay
 Author URI: https://razorpay.com
 */
@@ -162,8 +162,8 @@ function woocommerce_razorpay_subscriptions_init()
                 $this->settings[$key] = $wcRazorpay->settings[$key];
             }
 
-            $this->setting['webhook_secret'] = (empty($wcRazorpay->getSetting('webhook_secret')) === false) 
-                                                ? $wcRazorpay->getSetting('webhook_secret') 
+            $this->setting['webhook_secret'] = (empty($wcRazorpay->getSetting('webhook_secret')) === false)
+                                                ? $wcRazorpay->getSetting('webhook_secret')
                                                 : get_option('webhook_secret');
 
             if (empty($this->setting['webhook_secret']) === true) {
@@ -258,7 +258,7 @@ function woocommerce_razorpay_subscriptions_init()
                 {
                     $subscriptionId = $this->subscriptions->createSubscription($orderId);
                 }
-                
+
                 rzpSubscriptionErrorLog("getRazorpayPaymentParams triggered and subscription created with id:-".json_encode($subscriptionId));
 
                 if ($this->isHposEnabled())
@@ -357,7 +357,7 @@ function woocommerce_razorpay_subscriptions_init()
                 {
                     $subscriptionId = get_post_meta($parentOrder->get_id(), self::RAZORPAY_SUBSCRIPTION_ID)[0];
                 }
-                
+
                 //Canceling the subscription value
                 //0 (default): Cancel the subscription immediately.
                 //1: Cancel the subscription at the end of the current billing cycle.
