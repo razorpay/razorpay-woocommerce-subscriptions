@@ -315,8 +315,24 @@ class RZP_Subscription_Webhook extends RZP_Webhook
             return;
         }
 
-        $wcSubscription = array_values($wcSubscription)[0];
+        try
+        {
+            $payment = $this->api->payment->fetch($paymentId);
+        }
+        catch (Exception $e)
+        {
+            $message = $e->getMessage();
 
+            rzpSubscriptionErrorLog("Payment fetch failed with the message $message");
+            return "RAZORPAY ERROR: Payment fetch failed with the message $message";
+        }
+
+        if($payment->status === 'captured')
+        {
+            return;
+        }
+        
+        $wcSubscription = array_values($wcSubscription)[0];
 
         $is_first_payment = ( $wcSubscription->get_payment_count() < 1 );
 
